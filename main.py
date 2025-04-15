@@ -63,8 +63,17 @@ def countdown(timeleft):
     else: 
             messagebox.showinfo("TIMES UP")
 
+def clear():
+    hours.set("00")
+    mins.set("00")
+    secs.set("00")
+    timeleft.set("00")
+
 timerbtn = tk.Button(root, text="set timer", command= set)
 timerbtn.pack()
+
+clearbtn = tk.Button(root, text="Clear", command=clear)
+clearbtn.pack()
 
 clock()
 root.mainloop()
