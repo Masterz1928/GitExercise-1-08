@@ -1,9 +1,57 @@
 import tkinter as tk # Getting tkinter into the program
+from tkinter import filedialog
 
 root = tk.Tk()
 root.title("Note Editor")
 root.geometry("1200x600")
 #root.state("zoomed") *Not sure to make it zoomed or not yet, but writing it here for referance*
+
+#Creating Functions Here
+# Creating New File 
+def New_File():
+    #Clearing text box
+    Text_Box.delete("1.0", tk.END)
+    # Adding in a title 
+    root.title("New Note")
+    #Adding status bar for display
+    Status_bar.config(text="New File    ")
+
+# Creating a opening function
+def Opening():
+    #Clearing text box
+    Text_Box.delete("1.0", tk.END)
+    #Grab The file name
+    text_file = filedialog.askopenfilename(initialdir="C:/Users/", title="Open a File", filetypes=(("Text Files", "*.txt"),("All Files", "*.*")))
+    
+    #Updating Status bar 
+    name = text_file
+    Status_bar.config(text=f"{name}    ")
+    name = name.replace("C:/Users/", "") #Removing the C:/ Prefix
+    root.title(f"{name} - Note Editor")
+
+    # Load File Content
+    text_file = open(text_file, "r")
+    File_Content = text_file.read()
+    #Add it into the text box
+    Text_Box.insert(tk.END, File_Content)
+    #Then, Close the open file
+    text_file.close()
+# Creating a function to save a file as (in a .txt format) 
+def Saving_File_As():
+    text_file = filedialog.asksaveasfilename(defaultextension=".*", initialdir="C:/Users/", title="Save File As", filetypes=(("Text Files", "*.txt"),("All Files", "*.*")))
+    if text_file:
+        #Update the status bar
+        name = text_file
+        Status_bar.config(text=f"Saved: {name}    ")
+        name = name.replace("C:/Users/", "") #Removing the C:/ Prefix
+        root.title(f"{name} - Note Editor")       
+
+        # Save the file 
+        text_file = open(text_file, "w")
+        text_file.write(Text_Box.get(1.0, tk.END))
+        #close the file 
+        text_file.close()
+
 
 # Create main frame
 # (Putting the Text typing area and the scroll bar in the same area)
@@ -26,7 +74,9 @@ root.config(menu=TopMenuBar)
 #Adding in File Menu into the Menu Bar
 file_menu = tk.Menu(TopMenuBar, tearoff=False)
 TopMenuBar.add_cascade(label="File", menu=file_menu)
-file_menu.add_command(label="Open")
+file_menu.add_command(label="New", command=New_File)
+file_menu.add_command(label="Open", command=Opening)
+file_menu.add_command(label="Save as", command=Saving_File_As)
 file_menu.add_command(label="Save")
 
 #Adding editing menu 
@@ -38,8 +88,8 @@ edit_menu.add_command(label="Undo")
 edit_menu.add_command(label="Redo")
 
 #Adding a status bar (For referance)
-#Status_bar = tk.Label(root, text="Ready    ", anchor="e")
-#Status_bar.pack(fill="x", side="bottom", ipady=5)
+Status_bar = tk.Label(root, text="Ready    ", anchor="e")
+Status_bar.pack(fill="x", side="bottom", ipady=5)
 
 
 root.mainloop()
