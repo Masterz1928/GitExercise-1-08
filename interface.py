@@ -49,7 +49,7 @@ for text, frame in nav_buttons:
 
 #show the location and the feature of the fonts showed
 lbl= tk.Label(root, text="Home",bg="white",font=('Arial',30),anchor="w")
-lbl.place(x= 100,y=50)
+lbl.place(x= 125,y=50)
 
 root.mainloop()
 
