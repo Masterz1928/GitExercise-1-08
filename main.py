@@ -40,7 +40,6 @@ minsEntry.place(x=70, y=80)
 secsEntry = tk.Entry(root, width=3, font=("arial, 18"), textvariable=secs)
 secsEntry.place(x=120, y=80)
 
-#timer button
 def set():
     try: 
         totaltime = int(hours.get())*3600 + int(mins.get())*60 + int(secs.get())
@@ -67,7 +66,6 @@ def clear():
     hours.set("00")
     mins.set("00")
     secs.set("00")
-    timeleft.set("00")
 
 timerbtn = tk.Button(root, text="set timer", command= set)
 timerbtn.pack()
