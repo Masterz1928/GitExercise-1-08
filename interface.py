@@ -25,7 +25,7 @@ sidebar.pack(side="left", fill="y")
 content_area = tk.Frame(root, bg="white")
 content_area.pack(expand=True, fill="both")
 
-# Create frames for each section
+# Create different frames for each own section
 home_frame = tk.Frame(content_area, bg="white")
 timer_frame = tk.Frame(content_area, bg="white")
 calendar_frame = tk.Frame(content_area, bg="white")
@@ -47,10 +47,11 @@ for text, frame in nav_buttons:
                     anchor="w", relief="flat", command=lambda f=frame: show_frame(f))
     btn.pack(fill="x", padx=10, pady=20)
 
+timer_lbl= tk.Label(timer_frame, text="Timer Section", font=("Arial", 30), bg="white")
+timer_lbl.place(x=0,y=0)
+
 #show the location and the feature of the fonts showed
-lbl= tk.Label(root, text="Home",bg="white",font=('Arial',30),anchor="w")
-lbl.place(x= 125,y=50)
+lbl= tk.Label(home_frame, text="Home",bg="white",font=('Arial',30),anchor="w")
+lbl.place(x=0,y=0)
 
 root.mainloop()
-
-
