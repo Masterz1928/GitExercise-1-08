@@ -1,6 +1,7 @@
 import tkinter as tk
 from calendar import calendar
 from tkinter import ttk
+import os
 
 def show_frame(frame):
     frame.tkraise()
@@ -10,17 +11,29 @@ def show_frame(frame):
     else:
         search_entry.place_forget()
 
+
+def update_file_list():
+    file_listbox.delete(0, tk.END)
+    files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
+    for file in files:
+        file_listbox.insert(tk.END, file)
+
 root= tk.Tk()
 #the title show on the top
 root.title("MMU Study Buddy")
 # the size of whole window show
 root.state("zoomed")
 
+
+
+folder_path = "C:/Users/ASUS/Notes"
+
 #show the frame at the top
 top_frame = tk.Frame(root, bg="dark blue", height=50)
 top_frame.pack(side="top", fill="x")
 
 # show the searchbar in the frame
+
 search_entry = tk.Entry(top_frame, width=50, font=('Aptos', 15))
 
 # show the sidebar
@@ -60,27 +73,20 @@ for text, frame in nav_buttons:
     bd=0 ,command=lambda f=frame: show_frame(f))
     btn.pack(fill="x", padx=20, pady=20, ipady="15")
 
-timer_lbl= tk.Label(timer_frame, text="Timer Section", font=("Arial", 30), bg="white")
-timer_lbl.place(x=0,y=0)
+
 
 
 ##section note
 #show the location and the feature of the fonts showed
-note_lbl= tk.Label(home_frame, text="All Note",bg="white",font=('Arial',30))
+note_lbl= tk.Label(home_frame, text="All Note",font=('Arial',30))
 note_lbl.place(x=15,y=0)
 
-#use treeview to build a box to show the file we already created in this window
-tree = ttk.Treeview(home_frame, columns=("Name",), show="headings", height=15)
-tree.heading("Name", text="File Name",)
-tree.column("Name", width=1325)
-tree.place(x=20, y=60)
+file_listbox = tk.Listbox(home_frame, width=221,height=20)
+file_listbox.place(x=20,y=60)
 
-# as a sample that show the file how to shown in the window if there has any things i will add it
-#f, is a tuple/tk.END is insert the files from the back
-files = ["Note 1", "Note 2", "Homework.docx", "TodoList.txt"]
-for f in files:
-    tree.insert('', tk.END, values=(f,))
+update_file_list()
 
+#three button for the new, open, delete function
 btn_new = tk.Button(home_frame, text="New", font=20,relief="flat",width=30, height=5)
 btn_new.place(x=50, y=400)
 
@@ -93,15 +99,21 @@ btn_delete.place(x=950, y=400)
 pinnednote_lbl= tk.Label(home_frame, text="Pinned Note",bg="white",font=('Arial',25))
 pinnednote_lbl.place(x=15,y=550)
 
+#create a box for the pinned note
 tree = ttk.Treeview(home_frame, columns=("Name",), show="headings", height=15)
 tree.heading("Name", text="File Name",)
 tree.column("Name", width=1325)
 tree.place(x=20, y=600)
 
+#timer section
+timer_lbl= tk.Label(timer_frame, text="Timer Section", font=("Arial", 30), bg="white")
+timer_lbl.place(x=0,y=0)
 
+#calendar section
 calendar_lbl= tk.Label(calendar_frame,text="Calendar",bg="white",font=('Arial',30))
 calendar_lbl.place(x=0,y=0)
 
+#todolist section
 todolist_lbl= tk.Label(todolist_frame,text="To- Do-List",bg="white", font=('Arial',30))
 todolist_lbl.place(x=0,y=0)
 
@@ -110,12 +122,4 @@ show_frame(home_frame)
 
 
 
-
-
-
 root.mainloop()
-
-
-
-
-
