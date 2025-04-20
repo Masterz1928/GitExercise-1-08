@@ -110,8 +110,8 @@ def insert_markdown(tag):
         selected = Text_Box.get(tk.SEL_FIRST, tk.SEL_LAST)
         # Replace with markdown-wrapped text
         if tag == "**":
-            Text_Box.delete(tk.SEL_FIRST, tk.SEL_LAST)
-            Text_Box.insert(tk.INSERT, f"**{selected}**")
+            Text_Box.delete(tk.SEL_FIRST, tk.SEL_LAST) # Removes the selected text 
+            Text_Box.insert(tk.INSERT, f"**{selected}**") # Replaces the text with the tags in front adn back 
         elif tag == "*":
             Text_Box.delete(tk.SEL_FIRST, tk.SEL_LAST)
             Text_Box.insert(tk.INSERT, f"*{selected}*")
@@ -120,8 +120,6 @@ def insert_markdown(tag):
             Text_Box.insert(tk.INSERT, f"__{selected}__")
     except tk.TclError:
         pass  # No text selected
-
-
 
 
 # Toolbar Frame (Putting this first so that its top)
@@ -155,12 +153,13 @@ text_scroll.config(command=Text_Box.yview)
 
 # Buttons for bolding italicing and underlining
 bold_btn = tk.Button(ToolFrame, text="Bold", command=lambda: insert_markdown("**"))
-italic_btn = tk.Button(ToolFrame, text="Italic", command=lambda: insert_markdown("*"))
-underline_btn = tk.Button(ToolFrame, text="Underline", command=lambda: insert_markdown("__"))
+bold_btn.pack(side="left", padx=5, pady=5)
 
-bold_btn.pack(side="left", padx=2)
-italic_btn.pack(side="left", padx=2)
-underline_btn.pack(side="left", padx=2)
+italic_btn = tk.Button(ToolFrame, text="Italic", command=lambda: insert_markdown("*"))
+italic_btn.pack(side="left", padx=5, pady=5)
+
+underline_btn = tk.Button(ToolFrame, text="Underline", command=lambda: insert_markdown("__"))
+underline_btn.pack(side="left", padx=5, pady=5)
 
 # Function to update the preview
 def update_preview(event=None):
@@ -172,12 +171,11 @@ def update_preview(event=None):
 Text_Box.bind("<KeyRelease>", update_preview)
 
 # Preview Frame
-preview_frame = tk.Frame(MainFrame, bg="white")
+preview_frame = tk.Frame(MainFrame, bg="white", bd=5, relief="ridge")
 preview_frame.grid(row=0, column=1, sticky="nsew")
 
-html_preview = HTMLLabel(preview_frame, html="")
+html_preview = HTMLLabel(preview_frame, html="", bg="white")
 html_preview.pack(pady=20, padx=20, fill="both", expand=True)
-
 
 
 #Creating Menu Top menu bar
