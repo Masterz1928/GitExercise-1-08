@@ -4,6 +4,11 @@ from tkinter import ttk
 
 def show_frame(frame):
     frame.tkraise()
+#show the search bar only appear when it changes to the note_frame
+    if frame == home_frame:
+        search_entry.place(relx=0.5, rely=0.5, anchor="center")
+    else:
+        search_entry.place_forget()
 
 root= tk.Tk()
 #the title show on the top
@@ -17,7 +22,6 @@ top_frame.pack(side="top", fill="x")
 
 # show the searchbar in the frame
 search_entry = tk.Entry(top_frame, width=50, font=('Aptos', 15))
-search_entry.place(relx=0.5, rely=0.5, anchor="center")
 
 # show the sidebar
 sidebar = tk.Frame(root, width=120, bg="#f1efec")
@@ -110,5 +114,8 @@ show_frame(home_frame)
 
 
 root.mainloop()
+
+
+
 
 
