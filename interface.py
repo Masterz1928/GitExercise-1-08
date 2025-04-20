@@ -24,9 +24,8 @@ root.title("MMU Study Buddy")
 # the size of whole window show
 root.state("zoomed")
 
-
-
-folder_path = "C:/Users/ASUS/Notes"
+#file path
+folder_path = "C:/Notes"
 
 #show the frame at the top
 top_frame = tk.Frame(root, bg="dark blue", height=50)
