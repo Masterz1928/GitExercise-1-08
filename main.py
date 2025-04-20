@@ -1,15 +1,39 @@
 import tkinter as tk # Getting tkinter into the program
 from tkinter import filedialog
 from tkinter import messagebox
+from tkhtmlview import HTMLLabel
+import markdown
+import os
 
 root = tk.Tk()
 root.title("Note Editor")
-root.geometry("1200x600")
-#root.state("zoomed") *Not sure to make it zoomed or not yet, but writing it here for referance*
+root.state("zoomed") 
 
 #Set variable for the file name to False, when first starting the program
 global open_status_name 
 open_status_name = False
+# Set Folder for Notes Location
+folder_path = "C:/Notes"
+
+# Creating a function to delete and display the Notes from the folder, (FUnction for kakit's button)
+""""
+def update_file_list():
+    file_listbox.delete(0, tk.END)
+    files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
+    for file in files:
+        file_listbox.insert(tk.END, file)
+
+def deleting_notes():
+    selected_files = file_listbox.curselection()
+    if not selected_files: # IF no files are selected
+        messagebox.showwarning("No selection", "Select a file to delete.")
+        return
+    file_delete_name = file_listbox.get(selected_files[0])
+    confirm = messagebox.askyesno("Delete?", f"Are you sure you want to delete '{file_delete_name}'?")
+    if confirm:
+        os.remove(os.path.join(folder_path, file_delete_name))
+        update_file_list()
+"""
 
 #Creating Functions Here
 # Creating New File 
@@ -28,7 +52,7 @@ def Opening():
     #Clearing text box
     Text_Box.delete("1.0", tk.END)
     #Grab The file name
-    text_file = filedialog.askopenfilename(initialdir="C:/Users/Harsimran/Desktop/Documents/Notes", title="Open a File", filetypes=(("Text Files", "*.txt"),("All Files", "*.*")))
+    text_file = filedialog.askopenfilename(initialdir="C:/Notes", title="Open a File", filetypes=(("Text Files", "*.txt"),("All Files", "*.*")))
     
     #Check if there is a file name and if yes, make it global
     if text_file:
@@ -49,7 +73,7 @@ def Opening():
     text_file.close()
 # Creating a function to save a file as (in a .txt format) 
 def Saving_File_As():
-    text_file = filedialog.asksaveasfilename(defaultextension=".*", initialdir="C:/Users/Harsimran/Desktop/Documents/Notes", title="Save File As", filetypes=(("Text Files", "*.txt"),("All Files", "*.*")))
+    text_file = filedialog.asksaveasfilename(defaultextension=".*", initialdir="C:/Notes", title="Save File As", filetypes=(("Text Files", "*.txt"),("All Files", "*.*")))
     if text_file:
         #Update the status bar
         name = text_file
@@ -80,19 +104,81 @@ def Saving_File():
         Saving_File_As()
 
 
+def insert_markdown(tag):
+    try:
+        # Get selected text
+        selected = Text_Box.get(tk.SEL_FIRST, tk.SEL_LAST)
+        # Replace with markdown-wrapped text
+        if tag == "**":
+            Text_Box.delete(tk.SEL_FIRST, tk.SEL_LAST)
+            Text_Box.insert(tk.INSERT, f"**{selected}**")
+        elif tag == "*":
+            Text_Box.delete(tk.SEL_FIRST, tk.SEL_LAST)
+            Text_Box.insert(tk.INSERT, f"*{selected}*")
+        elif tag == "__":
+            Text_Box.delete(tk.SEL_FIRST, tk.SEL_LAST)
+            Text_Box.insert(tk.INSERT, f"__{selected}__")
+    except tk.TclError:
+        pass  # No text selected
+
+
+
+
+# Toolbar Frame (Putting this first so that its top)
+ToolFrame = tk.Frame(root)
+ToolFrame.pack(fill="x", side="top")
+
+
 # Create main frame
 # (Putting the Text typing area and the scroll bar in the same area)
+# Main container frame
 MainFrame = tk.Frame(root)
 MainFrame.pack(pady=5, padx=5, fill="both", expand=True)
 
-#Creating scrollbar
-text_scroll =tk.Scrollbar(MainFrame)
+# 2 equal columns
+MainFrame.columnconfigure(0, weight=1)
+MainFrame.columnconfigure(1, weight=1)
+
+# Text Frame + Scrollbar
+text_frame = tk.Frame(MainFrame)
+text_frame.grid(row=0, column=0, sticky="nsew")
+
+text_scroll = tk.Scrollbar(text_frame)
 text_scroll.pack(side="right", fill="y")
 
-#Creating The Text Area to type
-Text_Box = tk.Text(MainFrame, width=90, height=25, font=("Helvetica", 16), selectbackground="yellow", selectforeground="black", undo=True, yscrollcommand=text_scroll.set, wrap="word")
+Text_Box = tk.Text(text_frame, font=("Helvetica", 16),
+                   selectbackground="yellow", selectforeground="black",
+                   undo=True, yscrollcommand=text_scroll.set, wrap="word")
 Text_Box.pack(pady=20, padx=20, fill="both", expand=True)
 text_scroll.config(command=Text_Box.yview)
+
+
+# Buttons for bolding italicing and underlining
+bold_btn = tk.Button(ToolFrame, text="Bold", command=lambda: insert_markdown("**"))
+italic_btn = tk.Button(ToolFrame, text="Italic", command=lambda: insert_markdown("*"))
+underline_btn = tk.Button(ToolFrame, text="Underline", command=lambda: insert_markdown("__"))
+
+bold_btn.pack(side="left", padx=2)
+italic_btn.pack(side="left", padx=2)
+underline_btn.pack(side="left", padx=2)
+
+# Function to update the preview
+def update_preview(event=None):
+    markdown_text = Text_Box.get("1.0", tk.END)
+    html_content = markdown.markdown(markdown_text)
+    html_preview.set_html(html_content)
+
+# Bind the function to key release in the Text_Box
+Text_Box.bind("<KeyRelease>", update_preview)
+
+# Preview Frame
+preview_frame = tk.Frame(MainFrame, bg="white")
+preview_frame.grid(row=0, column=1, sticky="nsew")
+
+html_preview = HTMLLabel(preview_frame, html="")
+html_preview.pack(pady=20, padx=20, fill="both", expand=True)
+
+
 
 #Creating Menu Top menu bar
 TopMenuBar = tk.Menu(root)
