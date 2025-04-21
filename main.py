@@ -3,7 +3,6 @@ from tkinter import filedialog
 from tkinter import messagebox
 from tkhtmlview import HTMLLabel
 import markdown
-import os
 
 root = tk.Tk()
 root.title("Note Editor")
@@ -14,26 +13,6 @@ global open_status_name
 open_status_name = False
 # Set Folder for Notes Location
 folder_path = "C:/Notes"
-
-# Creating a function to delete and display the Notes from the folder, (FUnction for kakit's button)
-""""
-def update_file_list():
-    file_listbox.delete(0, tk.END)
-    files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
-    for file in files:
-        file_listbox.insert(tk.END, file)
-
-def deleting_notes():
-    selected_files = file_listbox.curselection()
-    if not selected_files: # IF no files are selected
-        messagebox.showwarning("No selection", "Select a file to delete.")
-        return
-    file_delete_name = file_listbox.get(selected_files[0])
-    confirm = messagebox.askyesno("Delete?", f"Are you sure you want to delete '{file_delete_name}'?")
-    if confirm:
-        os.remove(os.path.join(folder_path, file_delete_name))
-        update_file_list()
-"""
 
 #Creating Functions Here
 # Creating New File 
