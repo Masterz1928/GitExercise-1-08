@@ -1,5 +1,6 @@
 import tkinter as tk
 from calendar import calendar
+from tkinter import messagebox
 from tkinter import ttk
 import os
 
@@ -24,9 +25,26 @@ root.title("MMU Study Buddy")
 # the size of whole window showa
 root.state("zoomed")
 
+# Creating a function to delete and display the Notes from the folder, (FUnction for kakit's button)
+def update_file_list():
+    file_listbox.delete(0, tk.END)
+    files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
+    for file in files:
+        file_listbox.insert(tk.END, file)
+
+def deleting_notes():
+    selected_files = file_listbox.curselection() #Get the file that the user selected 
+    if not selected_files: # IF no files are selected, then do this  
+        messagebox.showwarning("No selection", "Select a file to delete.") #Prompt the User
+        return #Basically telling python to stop runninng this part and go out of this block of code 
+    file_delete_name = file_listbox.get(selected_files[0]) # Since the selected_files variable contains a tuple, we take the first value e.g. (1,) 
+    confirm = messagebox.askyesno("Delete?", f"Are you sure you want to delete '{file_delete_name}'?")
+    if confirm:
+        os.remove(os.path.join(folder_path, file_delete_name)) # Removes the file 
+        update_file_list() #Updates the Listbox 
 
 
-folder_path = "C:/Users/ASUS/Notes"
+folder_path = "C:/Notes"
 
 #show the frame at the top
 top_frame = tk.Frame(root, bg="dark blue", height=50)
@@ -93,7 +111,7 @@ btn_new.place(x=50, y=400)
 btn_open = tk.Button(home_frame, text="Open",font=20, relief="flat",width=30, height=5)
 btn_open.place(x=500, y=400)
 
-btn_delete = tk.Button(home_frame, text="Delete",font=20,relief="flat",width=30, height=5)
+btn_delete = tk.Button(home_frame, text="Delete",font=20,relief="flat",width=30, height=5, command=deleting_notes)
 btn_delete.place(x=950, y=400)
 
 pinnednote_lbl= tk.Label(home_frame, text="Pinned Note",bg="white",font=('Arial',25))
