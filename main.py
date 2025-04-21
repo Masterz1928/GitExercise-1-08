@@ -4,9 +4,9 @@ from tkinter import messagebox
 from tkhtmlview import HTMLLabel
 import markdown
 
-root = tk.Tk()
-root.title("Note Editor")
-root.state("zoomed") 
+NotepadWindow = tk.Tk()
+NotepadWindow.title("Note Editor")
+NotepadWindow.state("zoomed") 
 
 #Set variable for the file name to False, when first starting the program
 global open_status_name 
@@ -20,7 +20,7 @@ def New_File():
     #Clearing text box
     Text_Box.delete("1.0", tk.END)
     # Adding in a title 
-    root.title("New Note")
+    NotepadWindow.title("New Note")
     #Adding status bar for display
     Status_bar.config(text="New File    ")
     global open_status_name 
@@ -41,7 +41,7 @@ def Opening():
     name = text_file
     Status_bar.config(text=f"{name}    ")
     name = name.replace("C:/Users/", "") #Removing the C:/ Prefix
-    root.title(f"{name} - Note Editor")
+    NotepadWindow.title(f"{name} - Note Editor")
 
     # Load File Content
     text_file = open(text_file, "r")
@@ -58,7 +58,7 @@ def Saving_File_As():
         name = text_file
         Status_bar.config(text=f"Saved: {name}    ")
         name = name.replace("C:/Users/", "") #Removing the C:/ Prefix
-        root.title(f"{name} - Note Editor")       
+        NotepadWindow.title(f"{name} - Note Editor")       
 
         # Save the file 
         text_file = open(text_file, "w")
@@ -102,14 +102,14 @@ def insert_markdown(tag):
 
 
 # Toolbar Frame (Putting this first so that its top)
-ToolFrame = tk.Frame(root)
+ToolFrame = tk.Frame(NotepadWindow)
 ToolFrame.pack(fill="x", side="top")
 
 
 # Create main frame
 # (Putting the Text typing area and the scroll bar in the same area)
 # Main container frame
-MainFrame = tk.Frame(root)
+MainFrame = tk.Frame(NotepadWindow)
 MainFrame.pack(pady=5, padx=5, fill="both", expand=True)
 
 # 2 equal columns
@@ -158,8 +158,8 @@ html_preview.pack(pady=20, padx=20, fill="both", expand=True)
 
 
 #Creating Menu Top menu bar
-TopMenuBar = tk.Menu(root)
-root.config(menu=TopMenuBar)
+TopMenuBar = tk.Menu(NotepadWindow)
+NotepadWindow.config(menu=TopMenuBar)
 
 #Adding in File Menu into the Menu Bar
 file_menu = tk.Menu(TopMenuBar, tearoff=False)
@@ -178,8 +178,8 @@ edit_menu.add_command(label="Undo")
 edit_menu.add_command(label="Redo")
 
 #Adding a status bar (For referance)
-Status_bar = tk.Label(root, text="Ready    ", anchor="e")
+Status_bar = tk.Label(NotepadWindow, text="Ready    ", anchor="e")
 Status_bar.pack(fill="x", side="bottom", ipady=5)
 
 
-root.mainloop()
+NotepadWindow.mainloop()
