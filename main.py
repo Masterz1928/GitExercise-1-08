@@ -52,8 +52,10 @@ def Opening():
     text_file.close()
 # Creating a function to save a file as (in a .txt format) 
 def Saving_File_As():
+    global open_status_name 
     text_file = filedialog.asksaveasfilename(defaultextension=".*", initialdir="C:/Notes", title="Save File As", filetypes=(("Text Files", "*.txt"),("All Files", "*.*")))
     if text_file:
+        open_status_name = text_file
         #Update the status bar
         name = text_file
         Status_bar.config(text=f"Saved: {name}    ")
@@ -77,7 +79,6 @@ def Saving_File():
         text_file.close()
         # Prompting user with a message box
         Message_Pop = messagebox.showinfo(title="Saving File", message="Your file has been saved!")
-        Message_Pop.pack()
         Status_bar.config(text=f"Saved: {open_status_name}    ")
     else:
         Saving_File_As()
