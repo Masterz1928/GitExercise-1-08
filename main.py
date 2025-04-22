@@ -10,6 +10,23 @@ root = tk.Tk()
 root.title("Timer")
 root.geometry("800x800")
 
+#display clock
+def clock():
+    hour = time.strftime("%H")
+    minute = time.strftime("%M")
+    second = time.strftime("%S")
+    day = time.strftime("%a")
+    date = time.strftime("%d")
+
+    label_time.config(text=hour + ":" + minute + ":" + second)
+    label_day_date.config(text=day + "," + date)
+    label_time.after(1000, clock)
+
+label_time = tk.Label(root, text="time", font=("Arial", 20))
+label_time.place(relx=1.0, x=-10, y=10, anchor="ne")
+label_day_date = tk.Label(root, text="", font=("Arial", 12))
+label_day_date.place(relx=1.0, x=-10, y=40, anchor="ne")
+
 #connect betwen python and tkinter
 hours = StringVar(value="00")
 mins = StringVar(value="00")
@@ -105,4 +122,15 @@ def timer():
 start_btn = tk.Button(root, text="Start New Timer", command=timer)
 start_btn.pack()
 
+def open_history_window():
+    history_window = tk.Toplevel(root)
+    history_window.title("History")
+    history_window.geometry("400x400")
+    history_label = tk.Label(history_window, text="History Here", font=("Arial", 16))
+    history_label.pack(pady=20)
+
+history_button = tk.Button(root, text="History", command=open_history_window)
+history_button.place(relx=0.0, rely=1.0, x=10, y=-10, anchor="sw")
+
+clock()
 root.mainloop()
