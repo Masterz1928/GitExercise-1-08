@@ -144,6 +144,8 @@ underline_btn.pack(side="left", padx=5, pady=5)
 # Function to update the preview
 def update_preview(event=None):
     markdown_text = Text_Box.get("1.0", tk.END)
+    if "<style=" in markdown_text:
+        return
     html_content = markdown.markdown(markdown_text)
     html_preview.set_html(html_content)
 
