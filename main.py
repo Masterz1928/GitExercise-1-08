@@ -86,20 +86,22 @@ def Saving_File():
 
 def insert_markdown(tag):
     try:
-        # Get selected text
+        # Get the currently selected text from the Text_Box widget
         selected = Text_Box.get(tk.SEL_FIRST, tk.SEL_LAST)
-        # Replace with markdown-wrapped text
-        if tag == "**":
-            Text_Box.delete(tk.SEL_FIRST, tk.SEL_LAST) # Removes the selected text 
-            Text_Box.insert(tk.INSERT, f"**{selected}**") # Replaces the text with the tags in front adn back 
-        elif tag == "*":
-            Text_Box.delete(tk.SEL_FIRST, tk.SEL_LAST)
-            Text_Box.insert(tk.INSERT, f"*{selected}*")
-        elif tag == "__":
-            Text_Box.delete(tk.SEL_FIRST, tk.SEL_LAST)
-            Text_Box.insert(tk.INSERT, f"__{selected}__")
+
+        # If the tag is for bold or italic (markdown)
+        if tag in ["**", "*"]:
+            # Replace the selected text with the tag
+            Text_Box.replace(tk.SEL_FIRST, tk.SEL_LAST, f"{tag}{selected}{tag}")
+
+        # If the tag is for underline (HTML)
+        elif tag == "<u></u>":
+            # Replace the selected text with HTML underline tags (Cuz no default one in Markdown)
+            Text_Box.replace(tk.SEL_FIRST, tk.SEL_LAST, f"<u>{selected}</u>")
+
     except tk.TclError:
-        pass  # No text selected
+        # If no text is selected, 
+        pass # Can ignore and continue on 
 
 
 # Toolbar Frame (Putting this first so that its top)
@@ -124,9 +126,7 @@ text_frame.grid(row=0, column=0, sticky="nsew")
 text_scroll = tk.Scrollbar(text_frame)
 text_scroll.pack(side="right", fill="y")
 
-Text_Box = tk.Text(text_frame, font=("Helvetica", 16),
-                   selectbackground="yellow", selectforeground="black",
-                   undo=True, yscrollcommand=text_scroll.set, wrap="word")
+Text_Box = tk.Text(text_frame, font=("Helvetica", 16),selectbackground="yellow", selectforeground="black", undo=True, yscrollcommand=text_scroll.set, wrap="word")
 Text_Box.pack(pady=20, padx=20, fill="both", expand=True)
 text_scroll.config(command=Text_Box.yview)
 
@@ -138,7 +138,7 @@ bold_btn.pack(side="left", padx=5, pady=5)
 italic_btn = tk.Button(ToolFrame, text="Italic", command=lambda: insert_markdown("*"))
 italic_btn.pack(side="left", padx=5, pady=5)
 
-underline_btn = tk.Button(ToolFrame, text="Underline", command=lambda: insert_markdown("__"))
+underline_btn = tk.Button(ToolFrame, text="Underline", command=lambda: insert_markdown("<u></u>"))
 underline_btn.pack(side="left", padx=5, pady=5)
 
 # Function to update the preview
@@ -155,7 +155,7 @@ preview_frame = tk.Frame(MainFrame, bg="white", bd=5, relief="ridge")
 preview_frame.grid(row=0, column=1, sticky="nsew")
 
 html_preview = HTMLLabel(preview_frame, html="", bg="white")
-html_preview.pack(pady=20, padx=20, fill="both", expand=True)
+html_preview.pack(pady=20, padx=20, ipadx=150, fill="both", expand=True)
 
 
 #Creating Menu Top menu bar
