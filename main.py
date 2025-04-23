@@ -1,5 +1,3 @@
-# For adding in a method to stop the <style=> tag from breaking the preview 
-
 import tkinter as tk # Getting tkinter into the program
 from tkinter import filedialog
 from tkinter import messagebox
@@ -144,12 +142,30 @@ underline_btn = tk.Button(ToolFrame, text="Underline", command=lambda: insert_ma
 underline_btn.pack(side="left", padx=5, pady=5)
 
 # Function to update the preview
-def update_preview(event=None):
-    markdown_text = Text_Box.get("1.0", tk.END)
+def update_preview(event=None):  # Binding event as KeyRelease
+    print("update_preview triggered")  # To see if fucn is called properly 
+    markdown_text = Text_Box.get("1.0", tk.END)     # Get all the text from the Text_Box 
+
+    # Check if the text contains a style tag ('<style='). If it does, ignore updating the preview.
     if "<style=" in markdown_text:
-        return # If the program find the "forbbiden tag" return nothing 
-    html_content = markdown.markdown(markdown_text)
-    html_preview.set_html(html_content)
+        print("Style tag detected. Skipping preview update.")  # print a response 
+        return  # Stop the HTML preview fro updating. Otherwise need to restart 
+
+    try:
+        # convert the Markdown into HTML
+        html_content = markdown.markdown(markdown_text)
+        
+        # Remove whitespaces 
+        if html_content.strip():
+            # If got something in the HTML content update preview 
+            html_preview.set_html(html_content)
+        else:
+            # otherwise show this message 
+            print("Generated HTML content is empty.") 
+
+    except Exception as e:  # If got error, take the error as "e"
+        print(f"Error generating HTML preview: {e}")  # Print the error message
+
 
 # Bind the function to key release in the Text_Box
 Text_Box.bind("<KeyRelease>", update_preview)
