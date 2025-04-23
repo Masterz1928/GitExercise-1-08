@@ -26,7 +26,7 @@ root.state("zoomed")
 
 
 
-folder_path = "C:/Users/ASUS/Notes"
+folder_path = "C:/Notes"
 
 #show the frame at the top
 top_frame = tk.Frame(root, bg="dark blue", height=50)
@@ -78,7 +78,7 @@ for text, frame in nav_buttons:
 
 ##section note
 #show the location and the feature of the fonts showed
-note_lbl= tk.Label(home_frame, text="All Note",font=('Arial',30))
+note_lbl= tk.Label(home_frame, text="All Note",font=('Arial',30),bg="white")
 note_lbl.place(x=15,y=0)
 
 file_listbox = tk.Listbox(home_frame, width=221,height=20)
