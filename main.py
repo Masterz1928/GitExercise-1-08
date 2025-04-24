@@ -59,14 +59,34 @@ purpose_entry.pack()
 timers_frame = tk.Frame(root)
 timers_frame.pack(pady=20)
 
+def inputvalidation():
+    try:
+
+        if  int(secs.get()) < 0 or int(secs.get()) > 59:
+            messagebox.showerror("invalid input", "It must be smaller than 59 or greater than 0")
+            return False
+        if int(mins.get()) < 0 or int(mins.get()) > 59:
+            messagebox.showerror("invalid input", "It must be smaller than 59 or greater than 0")
+            return False
+        if int(hours.get()) < 0 or int(hours.get()) > 99:
+            messagebox.showerror("invalid input", "It must be smaller than 100 or greater than 0")
+            return False
+        if hours.get() == "00" and mins.get() == "00" and secs.get() == "00":
+           messagebox.showerror("Invalid Time", "Time must be greater than 00:00:00.")
+           return  False
+    
+        return True
+    except ValueError:
+        messagebox.showerror("Invalid Input","Ah boi do uk how to use a timer")
+        return False
+
 #timer function
 def timer():
-    try:
-        totaltime = int(hours.get())*3600 + int(mins.get())*60 + int(secs.get())
-    except ValueError:
-        messagebox.showerror("Invalid Input", "Please enter a valid number.")
+    if not inputvalidation():
         return
     
+    totaltime = int(hours.get())*3600 + int(mins.get())*60 + int(secs.get())
+
     create_time = time.strftime("%Y-%m-%d %H:%M:%S")
     purpose_text = purpose.get()
 
@@ -87,7 +107,7 @@ def timer():
     paused = [False]
 
     def countdown(timeleft):
-        if timeleft >=0:
+        if timeleft >= 0:
             hourss,remainder = divmod(timeleft,3600)
             minss,secss = divmod(remainder,60)
             ntimer_label.config(text=f"{hourss:02}:{minss:02}:{secss:02}")
