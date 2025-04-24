@@ -1,6 +1,7 @@
 import tkinter as tk
 import time 
 from tkinter import StringVar, messagebox
+import winsound
 #git add .
 #git commit -m "name"
 #git push
@@ -74,7 +75,7 @@ def inputvalidation():
         if hours.get() == "00" and mins.get() == "00" and secs.get() == "00":
            messagebox.showerror("Invalid Time", "Time must be greater than 00:00:00.")
            return  False
-    
+     
         return True
     except ValueError:
         messagebox.showerror("Invalid Input","Ah boi do uk how to use a timer")
@@ -100,7 +101,7 @@ def timer():
     ntimer_label = tk.Label(ntimer, text="", font=("Arial", 18))
     ntimer_label.pack(side=tk.LEFT)
 
-    purposetext = tk.Label(ntimer, text=purpose_text)
+    purposetext = tk.Label(ntimer, text=f"for {purpose_text}")
     purposetext.pack(side=tk.LEFT)
 
     remaining_time = [totaltime]
@@ -116,7 +117,8 @@ def timer():
             remaining_time[0] = timeleft
         else:
             ntimer_label.config(text="DONE!", fg="green")
-            messagebox.showinfo("ALERT", f"TIMES UP for '{purpose.get()}'")
+            winsound.Beep(1000, 500) 
+            messagebox.showinfo("ALERT", f"TIMES UP for '{purpose_text}'")
 
     def pause():
         paused[0] = True
@@ -143,6 +145,11 @@ def timer():
 
     clear_btn = tk.Button(ntimer, text="Clear", command=clear)
     clear_btn.pack(side=tk.LEFT)
+
+    hours.set("00")
+    mins.set("00")
+    secs.set("00")
+    purpose.set("")
 
     countdown(totaltime)  
       
