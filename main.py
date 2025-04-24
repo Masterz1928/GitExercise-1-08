@@ -7,14 +7,17 @@ import markdown
 import re
 from bs4 import BeautifulSoup
 
-NotepadWindow = tk.Tk()
+NotepadWindow = tk.Tk() 
 NotepadWindow.title("Note Editor")
-NotepadWindow.state("zoomed") 
+NotepadWindow.minsize(width=800, height=700)
+screen_width = NotepadWindow.winfo_screenwidth()
+screen_height = NotepadWindow.winfo_screenheight()
 
-style = ttk.Style()
-style.configure("TButton", padding=6, relief="flat", background="#dbeafe", font=("Helvetica", 10))
+# Optional padding to not use full screen
+app_width = int(screen_width * 0.95)
+app_height = int(screen_height * 0.95)
 
-
+NotepadWindow.geometry(f"{app_width}x{app_height}")
 #Set variable for the file name to False, when first starting the program
 global open_status_name 
 open_status_name = False
@@ -115,17 +118,18 @@ def insert_markdown(tag):
         pass  # If no text is selected, just ignore
 
 # Toolbar Frame (Putting this first so that its top)
-ToolFrame = tk.Frame(NotepadWindow)
+ToolFrame = tk.Frame(NotepadWindow, bg="#3538d4")
 ToolFrame.pack(fill="x", side="top")
 
 
 # Create main frame
 # (Putting the Text typing area and the scroll bar in the same area)
 # Main container frame
-MainFrame = tk.Frame(NotepadWindow)
-MainFrame.pack(pady=5, padx=5, fill="both", expand=True)
+MainFrame = tk.Frame(NotepadWindow, background="red")
+MainFrame.pack(pady=0, padx=5, fill="both", expand=True)
 
 # 2 equal columns
+MainFrame.rowconfigure(0, weight=1)
 MainFrame.columnconfigure(0, weight=1)
 MainFrame.columnconfigure(1, weight=1)
 
@@ -136,8 +140,9 @@ text_frame.grid(row=0, column=0, sticky="nsew")
 text_scroll = ttk.Scrollbar(text_frame)
 text_scroll.pack(side="right", fill="y")
 
-Text_Box = tk.Text(text_frame, font=("Helvetica", 16),selectbackground="yellow", selectforeground="black", undo=True, yscrollcommand=text_scroll.set, wrap="word")
+Text_Box = tk.Text(text_frame, font=("Helvetica", 16),selectbackground="yellow", selectforeground="black", undo=True, yscrollcommand=text_scroll.set, wrap="word", bd=2, relief="solid")
 Text_Box.pack(pady=20, padx=20, fill="both", expand=True)
+
 text_scroll.config(command=Text_Box.yview)
 
 
@@ -145,31 +150,37 @@ text_scroll.config(command=Text_Box.yview)
 style = ttk.Style()
 
 # Define custom styles for bold, italic, and underline
-style.configure('Bold.TButton', font=('Helvetica', 14, 'bold'))
-style.configure('Italic.TButton', font=('Helvetica', 14, 'italic'))
-style.configure('Underline.TButton', font=('Helvetica', 14, 'underline'))
+style.configure('Bold.TButton', font=('Helvetica', 10, 'bold'), padding=(5, 5))
+style.configure('Italic.TButton', font=('Helvetica', 10, 'italic'), padding=(5, 5))
+style.configure('Underline.TButton', font=('Helvetica', 10, 'underline'), padding=(5, 5))
+style.configure('Undo.TButton', font=('Helvetica', 10), padding=(10, 5))
+style.configure('Redo.TButton', font=('Helvetica', 10), padding=(10, 5))
+style.configure('Copy.TButton', font=('Helvetica', 10), padding=(10, 5))
+style.configure('Paste.TButton', font=('Helvetica', 10), padding=(10, 5))
 
-# Buttons for bolding, italicing, and underlining
-bold_btn = ttk.Button(ToolFrame, text="B", style="Bold.TButton")
-bold_btn.pack(side="left", padx=5, pady=10, ipadx=5, ipady=10)
+left_wrap = ttk.Frame(ToolFrame)
+left_wrap.pack(side="left", padx=(20, 0))  # only push from left
 
-italic_btn = ttk.Button(ToolFrame, text="I", style="Italic.TButton")
-italic_btn.pack(side="left", padx=5, pady=10, ipadx=5, ipady=10)
+bold_btn = ttk.Button(ToolFrame, text="B", style="Bold.TButton", width=10)
+bold_btn.pack(side="left", padx=10, pady=10)
 
-underline_btn = ttk.Button(ToolFrame, text="U", style="Underline.TButton")
-underline_btn.pack(side="left", padx=5, pady=10, ipadx=5, ipady=10)
+italic_btn = ttk.Button(ToolFrame, text="I", style="Italic.TButton", width=10)
+italic_btn.pack(side="left", padx=10, pady=10)
 
-undo_button = ttk.Button(ToolFrame, text="Undo", command=Text_Box.edit_undo)
-undo_button.pack(side="left", padx=5, pady=10, ipadx=5, ipady=10)
+underline_btn = ttk.Button(ToolFrame, text="U", style="Underline.TButton", width=10)
+underline_btn.pack(side="left", padx=10, pady=10)
 
-redo_button = ttk.Button(ToolFrame, text="Redo", command=Text_Box.edit_redo)
-redo_button.pack(side="left", padx=5, pady=10, ipadx=5, ipady=10)
+undo_button = ttk.Button(ToolFrame, text="Undo", style="Undo.TButton", width=10, command=Text_Box.edit_undo)
+undo_button.pack(side="left", padx=10, pady=10)
 
-copy_button = ttk.Button(ToolFrame, text="Copy")
-copy_button.pack(side="left", padx=5, pady=10, ipadx=5, ipady=10)
+redo_button = ttk.Button(ToolFrame, text="Redo", style="Redo.TButton", width=10,  command=Text_Box.edit_redo)
+redo_button.pack(side="left", padx=10, pady=10)
 
-paste_button = ttk.Button(ToolFrame, text="Paste")
-paste_button.pack(side="left", padx=5, pady=10, ipadx=5, ipady=10)
+copy_button = ttk.Button(ToolFrame, text="Copy" , style="Copy.TButton", width=10)
+copy_button.pack(side="left", padx=10, pady=10)
+
+paste_button = ttk.Button(ToolFrame, text="Paste", style="Paste.TButton", width=10)
+paste_button.pack(side="left", padx=10, pady=10)
 
 
 def update_preview(event=None):
@@ -223,12 +234,11 @@ def update_preview(event=None):
 Text_Box.bind("<KeyRelease>", update_preview)
 
 # Preview Frame
-preview_frame = tk.Frame(MainFrame, bg="white", bd=5, relief="ridge")
+preview_frame = tk.Frame(MainFrame, bg="white", bd=2, relief="solid")
 preview_frame.grid(row=0, column=1, sticky="nsew")
 
-html_preview = HTMLLabel(preview_frame, html="", bg="white")
-html_preview.pack(pady=20, padx=20, ipadx=150, fill="both", expand=True)
-
+html_preview = HTMLLabel(preview_frame, html="")
+html_preview.pack(pady=0, padx=0, ipadx=150, fill="both", expand=True)
 
 #Creating Menu Top menu bar
 TopMenuBar = tk.Menu(NotepadWindow)
@@ -240,7 +250,7 @@ font_choice.set("12")  # Set default value to string
 font_size_options = [str(size) for size in range(12, 42, 2)]
 
 font_size_menu = ttk.OptionMenu(ToolFrame, font_choice, *font_size_options)
-font_size_menu.pack(side="left", padx="10", pady="5", ipady="20")
+font_size_menu.pack(side="left", padx="10", pady="5")
 
 
 def change_font_size(*args):
