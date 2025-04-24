@@ -6,7 +6,6 @@ from tkinter import StringVar, messagebox
 #git push
 
 root = tk.Tk()
-
 root.title("Timer")
 root.geometry("800x800")
 
@@ -60,7 +59,7 @@ purpose_entry.pack()
 timers_frame = tk.Frame(root)
 timers_frame.pack(pady=20)
 
-#timer working 
+#timer function
 def timer():
     try:
         totaltime = int(hours.get())*3600 + int(mins.get())*60 + int(secs.get())
@@ -68,13 +67,20 @@ def timer():
         messagebox.showerror("Invalid Input", "Please enter a valid number.")
         return
     
+    create_time = time.strftime("%Y-%m-%d %H:%M:%S")
+    purpose_text = purpose.get()
+
+    #saving func
+    with open("timerhistory.txt","a") as f:
+        f.write(f"{create_time} - {purpose_text} ({hours.get()}:{mins.get()}:{secs.get()})\n")
+    
     ntimer = tk.Frame(timers_frame)
     ntimer.pack(pady=5)
 
     ntimer_label = tk.Label(ntimer, text="", font=("Arial", 18))
     ntimer_label.pack(side=tk.LEFT)
 
-    purposetext = tk.Label(ntimer, text=purpose.get())
+    purposetext = tk.Label(ntimer, text=purpose_text)
     purposetext.pack(side=tk.LEFT)
 
     remaining_time = [totaltime]
@@ -118,7 +124,8 @@ def timer():
     clear_btn = tk.Button(ntimer, text="Clear", command=clear)
     clear_btn.pack(side=tk.LEFT)
 
-    countdown(totaltime)    
+    countdown(totaltime)  
+      
 start_btn = tk.Button(root, text="Start New Timer", command=timer)
 start_btn.pack()
 
@@ -128,6 +135,15 @@ def open_history_window():
     history_window.geometry("400x400")
     history_label = tk.Label(history_window, text="History Here", font=("Arial", 16))
     history_label.pack(pady=20)
+    history_text = tk.Text(history_window, wrap=tk.WORD)
+    history_text.pack()
+
+    try:
+        with open("timerhistory.txt", "r") as f:
+            content = f.read()
+            history_text.insert(tk.END, content)
+    except FileNotFoundError:
+        history_text.insert(tk.END, "No history yet.")
 
 history_button = tk.Button(root, text="History", command=open_history_window)
 history_button.place(relx=0.0, rely=1.0, x=10, y=-10, anchor="sw")
