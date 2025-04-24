@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 
 NotepadWindow = tk.Tk() 
 NotepadWindow.title("Note Editor")
+NotepadWindow.config(bg="#a8a8a8")
 NotepadWindow.minsize(width=800, height=700)
 screen_width = NotepadWindow.winfo_screenwidth()
 screen_height = NotepadWindow.winfo_screenheight()
@@ -118,23 +119,25 @@ def insert_markdown(tag):
         pass  # If no text is selected, just ignore
 
 # Toolbar Frame (Putting this first so that its top)
-ToolFrame = tk.Frame(NotepadWindow, bg="#3538d4")
+ToolFrame = tk.Frame(NotepadWindow, bg="#a8a8a8", border=15)
 ToolFrame.pack(fill="x", side="top")
 
 
 # Create main frame
 # (Putting the Text typing area and the scroll bar in the same area)
 # Main container frame
-MainFrame = tk.Frame(NotepadWindow, background="red")
+MainFrame = tk.Frame(NotepadWindow)
+MainFrame.config(bg="white")
 MainFrame.pack(pady=0, padx=5, fill="both", expand=True)
 
 # 2 equal columns
 MainFrame.rowconfigure(0, weight=1)
+
 MainFrame.columnconfigure(0, weight=1)
 MainFrame.columnconfigure(1, weight=1)
 
 # Text Frame + Scrollbar
-text_frame = tk.Frame(MainFrame)
+text_frame = tk.Frame(MainFrame, bg="white",)
 text_frame.grid(row=0, column=0, sticky="nsew")
 
 text_scroll = ttk.Scrollbar(text_frame)
@@ -233,12 +236,18 @@ def update_preview(event=None):
 # Bind the function to key release in the Text_Box
 Text_Box.bind("<KeyRelease>", update_preview)
 
+
+# Change the column weight for the preview frame to limit its space usage
+MainFrame.columnconfigure(1, weight=0, minsize=250)  # Reduced weight and set a minimum size for the preview frame
+
 # Preview Frame
-preview_frame = tk.Frame(MainFrame, bg="white", bd=2, relief="solid")
-preview_frame.grid(row=0, column=1, sticky="nsew")
+preview_frame = tk.Frame(MainFrame, bd=2, relief="solid")
+preview_frame.config(bg="white")
+preview_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=20)
 
 html_preview = HTMLLabel(preview_frame, html="")
-html_preview.pack(pady=0, padx=0, ipadx=150, fill="both", expand=True)
+html_preview.config(bg="white")
+html_preview.pack(pady=10, padx=10, ipadx=43, fill="both", expand=True)  # Adjust padding and prevent it from expanding
 
 #Creating Menu Top menu bar
 TopMenuBar = tk.Menu(NotepadWindow)
@@ -264,8 +273,8 @@ file_menu = tk.Menu(TopMenuBar, tearoff=False)
 TopMenuBar.add_cascade(label="File", menu=file_menu)
 file_menu.add_command(label="New", command=New_File)
 file_menu.add_command(label="Open", command=Opening)
-file_menu.add_command(label="Save as", command=Saving_File_As)
 file_menu.add_command(label="Save", command=Saving_File)
+file_menu.add_command(label="Save as", command=Saving_File_As)
 
 #Adding editing menu 
 edit_menu = tk.Menu(TopMenuBar, tearoff=False)
@@ -276,7 +285,7 @@ edit_menu.add_command(label="Undo")
 edit_menu.add_command(label="Redo")
 
 #Adding a status bar (For referance)
-Status_bar = tk.Label(NotepadWindow, text="Ready    ", anchor="e")
+Status_bar = tk.Label(NotepadWindow, text="Ready    ", anchor="e", bg="#a8a8a8")
 Status_bar.pack(fill="x", side="bottom", ipady=5)
 
 
