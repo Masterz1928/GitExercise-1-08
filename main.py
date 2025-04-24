@@ -1,12 +1,19 @@
 import tkinter as tk # Getting tkinter into the program
+from tkinter import ttk
 from tkinter import filedialog
 from tkinter import messagebox
 from tkhtmlview import HTMLLabel
 import markdown
+import re
+from bs4 import BeautifulSoup
 
 NotepadWindow = tk.Tk()
 NotepadWindow.title("Note Editor")
 NotepadWindow.state("zoomed") 
+
+style = ttk.Style()
+style.configure("TButton", padding=6, relief="flat", background="#dbeafe", font=("Helvetica", 10))
+
 
 #Set variable for the file name to False, when first starting the program
 global open_status_name 
@@ -32,7 +39,7 @@ def Opening():
     Text_Box.delete("1.0", tk.END)
     #Grab The file name
     text_file = filedialog.askopenfilename(initialdir="C:/Notes", title="Open a File", filetypes=(("Text Files", "*.txt"),("All Files", "*.*")))
-    
+    Window_title = text_file
     #Check if there is a file name and if yes, make it global
     if text_file:
         global open_status_name 
@@ -41,7 +48,7 @@ def Opening():
     name = text_file
     Status_bar.config(text=f"{name}    ")
     name = name.replace("C:/Users/", "") #Removing the C:/ Prefix
-    NotepadWindow.title(f"{name} - Note Editor")
+    NotepadWindow.title(f"{Window_title} - Note Editor")
 
     # Load File Content
     text_file = open(text_file, "r")
@@ -99,10 +106,13 @@ def insert_markdown(tag):
             # Replace the selected text with HTML underline tags (Cuz no default one in Markdown)
             Text_Box.replace(tk.SEL_FIRST, tk.SEL_LAST, f"<u>{selected}</u>")
 
-    except tk.TclError:
-        # If no text is selected, 
-        pass # Can ignore and continue on 
+        elif tag == "font-size":
+            # Change the font size 
+            size = font_choice.get()  # Get the font size from the StringVar
+            Text_Box.replace(tk.SEL_FIRST, tk.SEL_LAST, f'<span style="font-size:{size}px">{selected}</span>')  # Use `size` here
 
+    except tk.TclError:
+        pass  # If no text is selected, just ignore
 
 # Toolbar Frame (Putting this first so that its top)
 ToolFrame = tk.Frame(NotepadWindow)
@@ -123,7 +133,7 @@ MainFrame.columnconfigure(1, weight=1)
 text_frame = tk.Frame(MainFrame)
 text_frame.grid(row=0, column=0, sticky="nsew")
 
-text_scroll = tk.Scrollbar(text_frame)
+text_scroll = ttk.Scrollbar(text_frame)
 text_scroll.pack(side="right", fill="y")
 
 Text_Box = tk.Text(text_frame, font=("Helvetica", 16),selectbackground="yellow", selectforeground="black", undo=True, yscrollcommand=text_scroll.set, wrap="word")
@@ -131,40 +141,82 @@ Text_Box.pack(pady=20, padx=20, fill="both", expand=True)
 text_scroll.config(command=Text_Box.yview)
 
 
-# Buttons for bolding italicing and underlining
-bold_btn = tk.Button(ToolFrame, text="Bold", command=lambda: insert_markdown("**"))
-bold_btn.pack(side="left", padx=5, pady=5)
+# Create a style object
+style = ttk.Style()
 
-italic_btn = tk.Button(ToolFrame, text="Italic", command=lambda: insert_markdown("*"))
-italic_btn.pack(side="left", padx=5, pady=5)
+# Define custom styles for bold, italic, and underline
+style.configure('Bold.TButton', font=('Helvetica', 14, 'bold'))
+style.configure('Italic.TButton', font=('Helvetica', 14, 'italic'))
+style.configure('Underline.TButton', font=('Helvetica', 14, 'underline'))
 
-underline_btn = tk.Button(ToolFrame, text="Underline", command=lambda: insert_markdown("<u></u>"))
-underline_btn.pack(side="left", padx=5, pady=5)
+# Buttons for bolding, italicing, and underlining
+bold_btn = ttk.Button(ToolFrame, text="B", style="Bold.TButton")
+bold_btn.pack(side="left", padx=5, pady=10, ipadx=5, ipady=10)
 
-# Function to update the preview
-def update_preview(event=None):  # Binding event as KeyRelease
-    print("update_preview triggered")  # To see if fucn is called properly 
-    markdown_text = Text_Box.get("1.0", tk.END)     # Get all the text from the Text_Box 
+italic_btn = ttk.Button(ToolFrame, text="I", style="Italic.TButton")
+italic_btn.pack(side="left", padx=5, pady=10, ipadx=5, ipady=10)
 
-    # Check if the text contains a style tag ('<style='). If it does, ignore updating the preview.
-    if "<style=" in markdown_text:
-        print("Style tag detected. Skipping preview update.")  # print a response 
-        return  # Stop the HTML preview fro updating. Otherwise need to restart 
+underline_btn = ttk.Button(ToolFrame, text="U", style="Underline.TButton")
+underline_btn.pack(side="left", padx=5, pady=10, ipadx=5, ipady=10)
+
+undo_button = ttk.Button(ToolFrame, text="Undo", command=Text_Box.edit_undo)
+undo_button.pack(side="left", padx=5, pady=10, ipadx=5, ipady=10)
+
+redo_button = ttk.Button(ToolFrame, text="Redo", command=Text_Box.edit_redo)
+redo_button.pack(side="left", padx=5, pady=10, ipadx=5, ipady=10)
+
+copy_button = ttk.Button(ToolFrame, text="Copy")
+copy_button.pack(side="left", padx=5, pady=10, ipadx=5, ipady=10)
+
+paste_button = ttk.Button(ToolFrame, text="Paste")
+paste_button.pack(side="left", padx=5, pady=10, ipadx=5, ipady=10)
+
+
+def update_preview(event=None):
+    markdown_text = Text_Box.get("1.0", tk.END)
+
+    lines = markdown_text.splitlines()
+    safe_lines = []
+    skipping = False
+
+    for line in lines:
+        if re.search(r'<\w+\s+style=.*?>', line) and not re.search(r'</\w+>', line):
+            skipping = True
+            continue
+
+        if skipping:
+            if re.search(r'</\w+>', line):
+                skipping = False
+            continue
+
+        safe_lines.append(line)
+
+    filtered_text = "\n".join(safe_lines)
 
     try:
-        # convert the Markdown into HTML
-        html_content = markdown.markdown(markdown_text)
-        
-        # Remove whitespaces 
-        if html_content.strip():
-            # If got something in the HTML content update preview 
-            html_preview.set_html(html_content)
-        else:
-            # otherwise show this message 
-            print("Generated HTML content is empty.") 
+        html_content = markdown.markdown(filtered_text)
+        soup = BeautifulSoup(html_content, "html.parser")
 
-    except Exception as e:  # If got error, take the error as "e"
-        print(f"Error generating HTML preview: {e}")  # Print the error message
+        ALLOWED_STYLES = ["font-size", "color"]
+        for tag in soup.find_all(True):
+            if "style" in tag.attrs:
+                styles = tag["style"].split(";")
+                clean_styles = []
+                for s in styles:
+                    s = s.strip()
+                    for allowed in ALLOWED_STYLES:
+                        if s.startswith(allowed):
+                            clean_styles.append(s)
+                if clean_styles:
+                    tag["style"] = "; ".join(clean_styles)
+                else:
+                    del tag["style"]
+
+        final_html = str(soup)
+        html_preview.set_html(final_html)
+
+    except Exception as e:
+        print(f"Error generating HTML preview: {e}")
 
 
 # Bind the function to key release in the Text_Box
@@ -181,6 +233,21 @@ html_preview.pack(pady=20, padx=20, ipadx=150, fill="both", expand=True)
 #Creating Menu Top menu bar
 TopMenuBar = tk.Menu(NotepadWindow)
 NotepadWindow.config(menu=TopMenuBar)
+
+# Set up OptionMenu for font size
+font_choice = tk.StringVar()
+font_choice.set("12")  # Set default value to string
+font_size_options = [str(size) for size in range(12, 42, 2)]
+
+font_size_menu = ttk.OptionMenu(ToolFrame, font_choice, *font_size_options)
+font_size_menu.pack(side="left", padx="10", pady="5", ipady="20")
+
+
+def change_font_size(*args):
+    insert_markdown("font-size")
+
+# Bind the function to handle changes in selection
+font_choice.trace("w", change_font_size)
 
 #Adding in File Menu into the Menu Bar
 file_menu = tk.Menu(TopMenuBar, tearoff=False)
