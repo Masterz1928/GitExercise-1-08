@@ -96,27 +96,24 @@ def Saving_File():
 
 
 def insert_markdown(tag):
+    ZWSP = "\u200b"  # Invisible separator character
+
     try:
-        # Get the currently selected text from the Text_Box widget
         selected = Text_Box.get(tk.SEL_FIRST, tk.SEL_LAST)
 
-        # If the tag is for bold or italic (markdown)
-        if tag in ["**", "*"]:
-            # Replace the selected text with the tag
-            Text_Box.replace(tk.SEL_FIRST, tk.SEL_LAST, f"{tag}{selected}{tag}")
+        if tag in ["**", "*"]:  # Bold or italic
+            Text_Box.replace(tk.SEL_FIRST, tk.SEL_LAST, f"{tag}{selected}{tag}{ZWSP}")
 
-        # If the tag is for underline (HTML)
-        elif tag == "<u></u>":
-            # Replace the selected text with HTML underline tags (Cuz no default one in Markdown)
-            Text_Box.replace(tk.SEL_FIRST, tk.SEL_LAST, f"<u>{selected}</u>")
+        elif tag == "<u></u>":  # Underline
+            Text_Box.replace(tk.SEL_FIRST, tk.SEL_LAST, f"<u>{selected}</u>{ZWSP}")
 
         elif tag == "font-size":
-            # Change the font size 
-            size = font_choice.get()  # Get the font size from the StringVar
-            Text_Box.replace(tk.SEL_FIRST, tk.SEL_LAST, f'<span style="font-size:{size}px">{selected}</span>')  # Use `size` here
+            size = font_choice.get()
+            Text_Box.replace(tk.SEL_FIRST, tk.SEL_LAST, f'<span style="font-size:{size}px">{selected}</span>{ZWSP}')
 
     except tk.TclError:
-        pass  # If no text is selected, just ignore
+        pass
+
 
 # Toolbar Frame (Putting this first so that its top)
 ToolFrame = tk.Frame(NotepadWindow, bg="#a8a8a8", border=15)
@@ -164,13 +161,13 @@ style.configure('Paste.TButton', font=('Helvetica', 10), padding=(10, 5))
 left_wrap = ttk.Frame(ToolFrame)
 left_wrap.pack(side="left", padx=(20, 0))  # only push from left
 
-bold_btn = ttk.Button(ToolFrame, text="B", style="Bold.TButton", width=10)
+bold_btn = ttk.Button(ToolFrame, text="B", style="Bold.TButton", width=10, command=lambda: insert_markdown("**"))
 bold_btn.pack(side="left", padx=10, pady=10)
 
-italic_btn = ttk.Button(ToolFrame, text="I", style="Italic.TButton", width=10)
+italic_btn = ttk.Button(ToolFrame, text="I", style="Italic.TButton", width=10, command=lambda: insert_markdown("*"))
 italic_btn.pack(side="left", padx=10, pady=10)
 
-underline_btn = ttk.Button(ToolFrame, text="U", style="Underline.TButton", width=10)
+underline_btn = ttk.Button(ToolFrame, text="U", style="Underline.TButton", width=10, command=lambda: insert_markdown("<u></u>"))
 underline_btn.pack(side="left", padx=10, pady=10)
 
 undo_button = ttk.Button(ToolFrame, text="Undo", style="Undo.TButton", width=10, command=Text_Box.edit_undo)
@@ -281,8 +278,8 @@ edit_menu = tk.Menu(TopMenuBar, tearoff=False)
 TopMenuBar.add_cascade(label="Edit", menu=edit_menu)
 edit_menu.add_command(label="Copy")
 edit_menu.add_command(label="Paste")
-edit_menu.add_command(label="Undo")
-edit_menu.add_command(label="Redo")
+edit_menu.add_command(label="Undo", command=Text_Box.edit_undo)
+edit_menu.add_command(label="Redo", command=Text_Box.edit_redo)
 
 #Adding a status bar (For referance)
 Status_bar = tk.Label(NotepadWindow, text="Ready    ", anchor="e", bg="#a8a8a8")
