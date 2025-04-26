@@ -19,32 +19,7 @@ def update_file_list():
     for file in files:
         file_listbox.insert(tk.END, file)
 
-def pin_selected_note():
-    selected = file_listbox.curselection()# select which of the file from the listbox
-    if selected:
-        file_name = file_listbox.get(selected)# return the selected value
-        #Check if the note is not already pinned (to avoid duplicates).
-        if file_name not in pinned_files:
-            pinned_files.append(file_name)
-            tree.insert("", tk.END, values=(file_name,))
-            messagebox.showinfo("Info", "Pinned Successfully!")
-
-def unpin_selected_note():
-    selected = file_listbox.curselection()
-    if selected:
-        file_name = file_listbox.get(selected)
-        if file_name in pinned_files:
-            messagebox.askyesno("Warning", "Do you wanna unpin the file?")
-            pinned_files.remove(file_name)
-            # Remove from treeview
-            for item in tree.get_children():#Loop through every row (item) inside the Treeview.
-                if tree.item(item, "values")[0] == file_name:#Check the file name matches the file to unpin.
-                    tree.delete(item)
-                    messagebox.showinfo("Info", "Unpinned Successfully!")
-        else:
-            messagebox.showinfo("Remind","Sorry, you haven't pinned this note ")
-
-
+#function for listbox
 def show_listbox_menu(event):
     try:
         # Select the item under mouse
@@ -53,6 +28,75 @@ def show_listbox_menu(event):
         listbox_menu.post(event.x_root, event.y_root)# the menu show at mouse screen position
     finally:
         listbox_menu.grab_release()#prevent the menu freeze the app until you click
+
+def pin_selected_note():
+    selected = file_listbox.curselection()
+    if selected:
+        file_name = file_listbox.get(selected)
+        if file_name not in pinned_files:
+            confirm = messagebox.askyesno("Pin", f"Do you want to pin '{file_name}'?")
+            if confirm:
+                pinned_files.append(file_name)
+                tree.insert("", tk.END, values=(file_name,))
+                messagebox.showinfo("Info", f"Pinned '{file_name}' successfully!")
+        else:
+            messagebox.showinfo("Info", "This note is already pinned.")
+
+
+
+def unpin_selected_note():
+    selected = file_listbox.curselection()
+    if selected:
+        file_name = file_listbox.get(selected)
+        if file_name in pinned_files:
+            confirm = messagebox.askyesno("Unpin", f"Do you want to unpin '{file_name}'?")
+            if confirm:
+                pinned_files.remove(file_name)
+                # Remove from treeview
+                for item in tree.get_children():
+                    if tree.item(item, "values")[0] == file_name:
+                        tree.delete(item)
+                        break
+                messagebox.showinfo("Info", f"Unpinned '{file_name}' successfully!")
+        else:
+            messagebox.showinfo("Remind", "This note is not pinned yet.")
+    else:
+        messagebox.showinfo("Remind", "Please select a note first.")
+
+
+
+
+# function for treeview
+def show_tree_menu(event):
+    try:
+        # Select the item under the mouse
+        tree.selection_remove(tree.selection())
+        tree.selection_set(tree.identify_row(event.y))
+        tree_menu.post(event.x_root, event.y_root)
+    finally:
+        tree_menu.grab_release()
+
+
+def unpin_from_tree():
+    selected = tree.selection()
+    if selected:
+        file_name = tree.item(selected[0], "values")[0]
+        confirm = messagebox.askyesno("Unpin", f"Do you want to unpin '{file_name}'?")
+        if confirm:
+            if file_name in pinned_files:
+                pinned_files.remove(file_name)
+            tree.delete(selected[0])
+            messagebox.showinfo("Info", f"Unpinned '{file_name}' successfully!")
+    else:
+        messagebox.showinfo("Remind", "Please select a pinned note first.")
+
+
+
+
+
+
+
+
 
 
 
@@ -128,6 +172,10 @@ note_lbl.place(x=15,y=0)
 file_listbox = tk.Listbox(home_frame, width=221,height=20)
 file_listbox.place(x=20,y=60)
 
+
+tree_menu = tk.Menu(root, tearoff=0)
+tree_menu.add_command(label="Unpin", command=lambda: unpin_from_tree())
+
 file_listbox.bind("<Button-3>", show_listbox_menu)# the right click function and bind with the show_list_menu function
 
 
@@ -153,6 +201,7 @@ tree = ttk.Treeview(home_frame, columns=("Name",), show="headings", height=15)
 tree.heading("Name", text="File Name",)
 tree.column("Name", width=1325)
 tree.place(x=20, y=600)
+tree.bind("<Button-3>", show_tree_menu)
 
 #timer section
 timer_lbl= tk.Label(timer_frame, text="Timer Section", font=("Arial", 30), bg="white")
