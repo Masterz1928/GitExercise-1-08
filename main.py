@@ -274,13 +274,13 @@ def update_preview(event=None):
 
     try:
         #to convert markdown into html for display
-        html_content = markdown.markdown(filtered_text)
+        html_content = markdown.markdown(filtered_text, extensions=["nl2br"])
         # General knowledge - Parse - analyzes and interprets strings of data, breaking them down into meaningful parts according to a specific set of rules or grammar
         # We use soup to to inspect the HTML, not to drink 
         soup = BeautifulSoup(html_content, "html.parser")
         # Make a list of the halal styles that we aallow the program to use  
         # Adding in an if statement that filters out tags depending on the program's mode  
-        if Current_File_Mode == "markdown":
+        if Current_File_Mode == "Markdown":
             ALLOWED_STYLES = ["font-size", "color"]
         elif Current_File_Mode == "html":
             ALLOWED_STYLES = ["font-size", "color", "background", "border", "margin", "padding"]
