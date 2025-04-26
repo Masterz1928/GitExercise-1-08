@@ -23,6 +23,10 @@ NotepadWindow.geometry(f"{app_width}x{app_height}")
 global open_status_name 
 open_status_name = False
 
+#Set variable for the Cut Content to False, when first starting the program
+global selected_text_by_user 
+selected_text_by_user = False
+
 #Set another global variable for saving the file and switching modes
 Current_File_Mode = "Markdown"
 
@@ -110,7 +114,6 @@ def Saving_File():
     else:
         Saving_File_As()
 
-
 def insert_markdown(tag):
     ZWSP = "\u200b"  # Invisible separator character
 
@@ -135,8 +138,6 @@ def insert_markdown(tag):
     except tk.TclError:
         pass
 
-
-
 def update_button_based_on_mode():
     if Current_File_Mode == "Text":
         bold_btn.config(state=tk.DISABLED)
@@ -156,8 +157,6 @@ def update_button_based_on_mode():
         underline_btn.config(state=tk.NORMAL)
         font_size_menu.config(state=tk.NORMAL)
         
-
-
 def change_to_html():
     global Current_File_Mode
     Current_File_Mode = "HTML"
@@ -181,6 +180,50 @@ def change_to_markdown():
     File_Settings_Menu.entryconfig("Change to HTML", background="white")  # Reset others
     File_Settings_Menu.entryconfig("Change to Markdown", background="lightblue")
     update_button_based_on_mode()
+
+# Creating a function for cut function
+def cut_text(e=None):
+    global selected_text_by_user
+    if e:
+        selected_text_by_user = NotepadWindow.clipboard_get()
+    else:
+        if Text_Box.selection_get():
+            # put into a variable
+            selected_text_by_user = Text_Box.selection_get()
+            # Delete the selected text
+            Text_Box.delete("sel.first" ,"sel.last")
+            #Clear clipboard, then put new infomation
+            NotepadWindow.clipboard_clear()
+            NotepadWindow.clipboard_append(selected_text_by_user)
+
+
+# Creating a function for copy function
+def copy_text(e):
+    global selected_text_by_user
+    # Check to see if we used keyboard shortcuts
+    if e:
+        selected_text_by_user = NotepadWindow.clipboard_get()
+
+    if Text_Box.selection_get():
+        selected_text_by_user = Text_Box.selection_get()
+        #Clear clipboard, then put new infomation
+        NotepadWindow.clipboard_clear()
+        NotepadWindow.clipboard_append(selected_text_by_user)
+
+
+# Creating a function for paste function
+def paste_text(e=None):
+    global selected_text_by_user
+
+    #check to see if there are any keybaord shortcut
+    if e:
+        selected_text_by_user = NotepadWindow.clipboard_get()
+    else:
+        if selected_text_by_user:
+            Position = Text_Box.index(tk.INSERT)
+            Text_Box.insert(Position, selected_text_by_user) 
+
+
 
 
 # Toolbar Frame (Putting this first so that its top)
@@ -222,8 +265,9 @@ style.configure('Bold.TButton', font=('Helvetica', 10, 'bold'), padding=(5, 5))
 style.configure('Italic.TButton', font=('Helvetica', 10, 'italic'), padding=(5, 5))
 style.configure('Underline.TButton', font=('Helvetica', 10, 'underline'), padding=(5, 5))
 style.configure('Undo.TButton', font=('Helvetica', 10), padding=(10, 5))
-style.configure('Redo.TButton', font=('Helvetica', 10), padding=(10, 5))
+style.configure('Cut.TButton', font=('Helvetica', 10), padding=(10, 5))
 style.configure('Copy.TButton', font=('Helvetica', 10), padding=(10, 5))
+style.configure('Redo.TButton', font=('Helvetica', 10), padding=(10, 5))
 style.configure('Paste.TButton', font=('Helvetica', 10), padding=(10, 5))
 
 left_wrap = ttk.Frame(ToolFrame)
@@ -244,10 +288,13 @@ undo_button.pack(side="left", padx=10, pady=10)
 redo_button = ttk.Button(ToolFrame, text="Redo", style="Redo.TButton", width=10,  command=Text_Box.edit_redo)
 redo_button.pack(side="left", padx=10, pady=10)
 
-copy_button = ttk.Button(ToolFrame, text="Copy" , style="Copy.TButton", width=10)
+cut_button = ttk.Button(ToolFrame, text="Cut" , style="Cut.TButton", width=10, command=cut_text)
+cut_button.pack(side="left", padx=10, pady=10)
+
+copy_button = ttk.Button(ToolFrame, text="Copy" , style="Copy.TButton", width=10, command=copy_text)
 copy_button.pack(side="left", padx=10, pady=10)
 
-paste_button = ttk.Button(ToolFrame, text="Paste", style="Paste.TButton", width=10)
+paste_button = ttk.Button(ToolFrame, text="Paste", style="Paste.TButton", width=10, command=paste_text)
 paste_button.pack(side="left", padx=10, pady=10)
 
 
@@ -370,8 +417,9 @@ file_menu.add_command(label="Save as", command=Saving_File_As)
 #Adding editing menu 
 edit_menu = tk.Menu(TopMenuBar, tearoff=False)
 TopMenuBar.add_cascade(label="Edit", menu=edit_menu)
-edit_menu.add_command(label="Copy")
-edit_menu.add_command(label="Paste")
+edit_menu.add_command(label="Cut    Ctrl+X", command=lambda: cut_text(False))
+edit_menu.add_command(label="Copy   Ctrl+C", command=lambda: copy_text(False))
+edit_menu.add_command(label="Paste  Ctrl+V", command=lambda: paste_text(False))
 edit_menu.add_command(label="Undo", command=Text_Box.edit_undo)
 edit_menu.add_command(label="Redo", command=Text_Box.edit_redo)
 
@@ -386,5 +434,9 @@ File_Settings_Menu.add_command(label="Change to Text File", command=change_to_te
 Status_bar = tk.Label(NotepadWindow, text="Ready    ", anchor="e", bg="#a8a8a8")
 Status_bar.pack(fill="x", side="bottom", ipady=5)
 
+# Adding in basic Binding
+NotepadWindow.bind("<Control-Key-x>", selected_text_by_user)
+NotepadWindow.bind("<Control-Key-c>", copy_text)
+NotepadWindow.bind("<Control-Key-v>", paste_text)
 
 NotepadWindow.mainloop()
