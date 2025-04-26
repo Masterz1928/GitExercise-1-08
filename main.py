@@ -137,13 +137,13 @@ def timer():
         resume_btn.config(state="disabled")
         pause_btn.config(state="normal")
 
-    pause_btn = tk.Button(ntimer, text="Pause", command=pause)
+    pause_btn = tk.Button(ntimer, text="⏸ Pause", command=pause)
     pause_btn.pack(side=tk.LEFT)
 
-    resume_btn = tk.Button(ntimer, text="Resume", command=resume, state="disabled")
+    resume_btn = tk.Button(ntimer, text="▶ Resume", command=resume)
     resume_btn.pack(side=tk.LEFT)
 
-    clear_btn = tk.Button(ntimer, text="Clear", command=clear)
+    clear_btn = tk.Button(ntimer, text="❌ Clear", command=clear)
     clear_btn.pack(side=tk.LEFT)
 
     hours.set("00")
