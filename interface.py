@@ -1,7 +1,8 @@
 import tkinter as tk
 from calendar import calendar
-from tkinter import ttk
+from tkinter import ttk,messagebox
 import os
+
 
 def show_frame(frame):
     frame.tkraise()
@@ -18,21 +19,65 @@ def update_file_list():
     for file in files:
         file_listbox.insert(tk.END, file)
 
+def pin_selected_note():
+    selected = file_listbox.curselection()# select which of the file from the listbox
+    if selected:
+        file_name = file_listbox.get(selected)# return the selected value
+        #Check if the note is not already pinned (to avoid duplicates).
+        if file_name not in pinned_files:
+            pinned_files.append(file_name)
+            tree.insert("", tk.END, values=(file_name,))
+            messagebox.showinfo("Info", "Pinned Successfully!")
+
+def unpin_selected_note():
+    selected = file_listbox.curselection()
+    if selected:
+        file_name = file_listbox.get(selected)
+        if file_name in pinned_files:
+            messagebox.askyesno("Warning", "Do you wanna unpin the file?")
+            pinned_files.remove(file_name)
+            # Remove from treeview
+            for item in tree.get_children():#Loop through every row (item) inside the Treeview.
+                if tree.item(item, "values")[0] == file_name:#Check the file name matches the file to unpin.
+                    tree.delete(item)
+                    messagebox.showinfo("Info", "Unpinned Successfully!")
+        else:
+            messagebox.showinfo("Remind","Sorry, you haven't pinned this note ")
+
+
+def show_listbox_menu(event):
+    try:
+        # Select the item under mouse
+        file_listbox.selection_clear(0, tk.END)# clear selection if choose other things
+        file_listbox.selection_set(file_listbox.nearest(event.y))#find item nearest to where you clicked.
+        listbox_menu.post(event.x_root, event.y_root)# the menu show at mouse screen position
+    finally:
+        listbox_menu.grab_release()#prevent the menu freeze the app until you click
+
+
+
 root= tk.Tk()
 #the title show on the top
 root.title("MMU Study Buddy")
 # the size of whole window show
 root.state("zoomed")
 
-#file path
+
+pinned_files = []
 folder_path = "C:/Notes"
+
+# Create a menu for right-click (context menu)
+listbox_menu = tk.Menu(root, tearoff=0)# tear off is the dash line in the menu list
+listbox_menu.add_command(label="Pin", command=lambda: pin_selected_note())
+listbox_menu.add_command(label="Unpin", command=lambda: unpin_selected_note())
+
+
 
 #show the frame at the top
 top_frame = tk.Frame(root, bg="dark blue", height=50)
 top_frame.pack(side="top", fill="x")
 
 # show the searchbar in the frame
-
 search_entry = tk.Entry(top_frame, width=50, font=('Aptos', 15))
 
 # show the sidebar
@@ -83,6 +128,9 @@ note_lbl.place(x=15,y=0)
 file_listbox = tk.Listbox(home_frame, width=221,height=20)
 file_listbox.place(x=20,y=60)
 
+file_listbox.bind("<Button-3>", show_listbox_menu)# the right click function and bind with the show_list_menu function
+
+
 update_file_list()
 
 #three button for the new, open, delete function
@@ -97,6 +145,8 @@ btn_delete.place(x=950, y=400)
 
 pinnednote_lbl= tk.Label(home_frame, text="Pinned Note",bg="white",font=('Arial',25))
 pinnednote_lbl.place(x=15,y=550)
+
+
 
 #create a box for the pinned note
 tree = ttk.Treeview(home_frame, columns=("Name",), show="headings", height=15)
@@ -122,3 +172,5 @@ show_frame(home_frame)
 
 
 root.mainloop()
+
+
