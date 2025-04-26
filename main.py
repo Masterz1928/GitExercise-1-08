@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 
 NotepadWindow = tk.Tk() 
 NotepadWindow.title("Note Editor")
-NotepadWindow.config(bg="#a8a8a8")
+NotepadWindow.config(bg="#a8a8a9")
 NotepadWindow.minsize(width=800, height=700)
 screen_width = NotepadWindow.winfo_screenwidth()
 screen_height = NotepadWindow.winfo_screenheight()
