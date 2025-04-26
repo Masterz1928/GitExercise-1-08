@@ -64,7 +64,7 @@ def Opening():
 # Creating a function to save a file as (in a .txt format) 
 def Saving_File_As():
     global open_status_name 
-    text_file = filedialog.asksaveasfilename(defaultextension=".*", initialdir="C:/Notes", title="Save File As", filetypes=(("Text Files", "*.txt"),("All Files", "*.*")))
+    text_file = filedialog.asksaveasfilename(defaultextension=".*", initialdir="C:/Notes", title="Save File As", filetypes=(("Text Files", "*.txt"),("Markdown Files", "*.md"),("HTML Files", "*.html*"),("All Files", "*.*")))
     if text_file:
         open_status_name = text_file
         #Update the status bar
@@ -100,16 +100,21 @@ def insert_markdown(tag):
 
     try:
         selected = Text_Box.get(tk.SEL_FIRST, tk.SEL_LAST)
+        start = Text_Box.index(tk.SEL_FIRST)
+        end = Text_Box.index(tk.SEL_LAST)
+
+        # Pause undo stack to avoid intermediate steps
+        Text_Box.edit_separator()  # Mark undo boundary before the change (Checkpoint for the programm to undo)
 
         if tag in ["**", "*"]:  # Bold or italic
-            Text_Box.replace(tk.SEL_FIRST, tk.SEL_LAST, f"{tag}{selected}{tag}{ZWSP}")
-
-        elif tag == "<u></u>":  # Underline
-            Text_Box.replace(tk.SEL_FIRST, tk.SEL_LAST, f"<u>{selected}</u>{ZWSP}")
-
+            Text_Box.replace(start, end, f"{tag}{selected}{tag}{ZWSP}")
+        elif tag == "<u></u>":
+            Text_Box.replace(start, end, f"<u>{selected}</u>{ZWSP}")
         elif tag == "font-size":
             size = font_choice.get()
-            Text_Box.replace(tk.SEL_FIRST, tk.SEL_LAST, f'<span style="font-size:{size}px">{selected}</span>{ZWSP}')
+            Text_Box.replace(start, end, f'<span style="font-size:{size}px">{selected}</span>{ZWSP}')
+
+        Text_Box.edit_separator()  # Mark undo boundary after the change (New checkpoint for the programm to undo)
 
     except tk.TclError:
         pass
