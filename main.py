@@ -22,6 +22,10 @@ NotepadWindow.geometry(f"{app_width}x{app_height}")
 #Set variable for the file name to False, when first starting the program
 global open_status_name 
 open_status_name = False
+
+#Set another global variable for saving the file and switching modes
+Current_File_Mode = "Text"
+
 # Set Folder for Notes Location
 folder_path = "C:/Notes"
 
@@ -64,7 +68,19 @@ def Opening():
 # Creating a function to save a file as (in a .txt format) 
 def Saving_File_As():
     global open_status_name 
-    text_file = filedialog.asksaveasfilename(defaultextension=".*", initialdir="C:/Notes", title="Save File As", filetypes=(("Text Files", "*.txt"),("Markdown Files", "*.md"),("HTML Files", "*.html*"),("All Files", "*.*")))
+    if Current_File_Mode == "Text":
+        file_extention ="*.txt"
+        filetypestosave = [("Text Files", "*.txt"), ("All Files", "*.*")]
+
+    if Current_File_Mode == "HTML":
+        file_extention ="*.html"
+        filetypestosave = [("HTML Files", "*.html"), ("All Files", "*.*")]
+
+    if Current_File_Mode == "Markdown":
+        file_extention ="*.md"
+        filetypestosave = [("Markdown Files", "*.md"), ("All Files", "*.*")]
+        
+    text_file = filedialog.asksaveasfilename(defaultextension=file_extention, initialdir="C:/Notes", title="Save File As", filetypes=filetypestosave)
     if text_file:
         open_status_name = text_file
         #Update the status bar
@@ -118,6 +134,53 @@ def insert_markdown(tag):
 
     except tk.TclError:
         pass
+
+
+
+def update_button_based_on_mode():
+    if Current_File_Mode == "Text":
+        bold_btn.config(state=tk.DISABLED)
+        italic_btn.config(state=tk.DISABLED)
+        underline_btn.config(state=tk.DISABLED)
+        font_size_menu.config(state=tk.DISABLED)
+        
+    if Current_File_Mode == "HTML":
+        bold_btn.config(state=tk.DISABLED)
+        italic_btn.config(state=tk.DISABLED)
+        underline_btn.config(state=tk.DISABLED)
+        font_size_menu.config(state=tk.DISABLED)
+        
+    if Current_File_Mode == "Markdown":
+        bold_btn.config(state=tk.NORMAL)
+        italic_btn.config(state=tk.NORMAL)
+        underline_btn.config(state=tk.NORMAL)
+        font_size_menu.config(state=tk.NORMAL)
+        
+
+
+def change_to_html():
+    global Current_File_Mode
+    Current_File_Mode = "HTML"
+    File_Settings_Menu.entryconfig("Change to Text File", background="white")  # Color for active mode
+    File_Settings_Menu.entryconfig("Change to HTML", background="lightblue")  # Reset others
+    File_Settings_Menu.entryconfig("Change to Markdown", background="white")
+    update_button_based_on_mode()
+
+def change_to_text():
+    global Current_File_Mode
+    Current_File_Mode = "Text"
+    File_Settings_Menu.entryconfig("Change to Text File", background="lightblue")  # Color for active mode
+    File_Settings_Menu.entryconfig("Change to HTML", background="white")  # Reset others
+    File_Settings_Menu.entryconfig("Change to Markdown", background="white")
+    update_button_based_on_mode()
+
+def change_to_markdown():
+    global Current_File_Mode
+    Current_File_Mode = "Markdown"
+    File_Settings_Menu.entryconfig("Change to Text File", background="white")  # Color for active mode
+    File_Settings_Menu.entryconfig("Change to HTML", background="white")  # Reset others
+    File_Settings_Menu.entryconfig("Change to Markdown", background="lightblue")
+    update_button_based_on_mode()
 
 
 # Toolbar Frame (Putting this first so that its top)
@@ -285,6 +348,13 @@ edit_menu.add_command(label="Copy")
 edit_menu.add_command(label="Paste")
 edit_menu.add_command(label="Undo", command=Text_Box.edit_undo)
 edit_menu.add_command(label="Redo", command=Text_Box.edit_redo)
+
+#Adding File setting Menu 
+File_Settings_Menu = tk.Menu(TopMenuBar, tearoff=False)
+TopMenuBar.add_cascade(label="File Settings", menu=File_Settings_Menu)
+File_Settings_Menu.add_command(label="Change to Markdown", command=change_to_markdown)
+File_Settings_Menu.add_command(label="Change to HTML", command=change_to_html)
+File_Settings_Menu.add_command(label="Change to Text File", command=change_to_text)
 
 #Adding a status bar (For referance)
 Status_bar = tk.Label(NotepadWindow, text="Ready    ", anchor="e", bg="#a8a8a8")
