@@ -1,8 +1,8 @@
 import tkinter as tk
-from calendar import calendar
-from tkinter import ttk,messagebox
+from tkcalendar import Calendar
+from tkinter import ttk,messagebox,colorchooser
 import os
-
+from datetime import date
 
 def show_frame(frame):
     frame.tkraise()
@@ -72,10 +72,10 @@ def show_tree_menu(event):
     try:
         # Select the item under the mouse
         tree.selection_remove(tree.selection())
-        tree.selection_set(tree.identify_row(event.y))
+        tree.selection_set(tree.identify_row(event.y))#find item nearest you clicked.
         tree_menu.post(event.x_root, event.y_root)
     finally:
-        tree_menu.grab_release()
+        tree_menu.grab_release()#prevent menu freeze the app until you click
 
 
 def unpin_from_tree():
@@ -106,6 +106,62 @@ def load_pinned_notes():
                 pinned_files.append(note)
                 tree.insert("", tk.END, values=(note,))
 
+
+
+# In your calendar section:
+def setup_calendar():
+    global cal
+    today = date.today()  # Get today's date
+    cal = Calendar(
+        calendar_frame,
+        selectmode='day',
+        font=("Arial", 16),  # Make text bigger
+        cursor="hand1"  # Change cursor when hover
+    )
+    cal.pack(padx=(0,50),pady=(80,90), expand=True, fill="both")  # Expand to fill available space
+
+def choose_calendar_color():
+    color = colorchooser.askcolor(title="Choose Calendar Color")[1]  # Open color picker and get HEX color
+    if color:
+        cal.config(
+            background=color,
+            disabledbackground=color,
+            normalbackground=color,
+            weekendbackground=color,
+            selectbackground=color,
+            selectforeground="white",
+        )
+
+def apply_theme(choice):
+    if choice == "Custom":
+        choose_calendar_color()
+    elif choice == "Pink":
+        cal.config(
+            background="#FFE4E1",
+            disabledbackground="#FFE4E1",
+            normalbackground="#FFE4E1",
+            weekendbackground="#FFD1DC",
+            selectbackground="#FF69B4",
+            selectforeground="white",
+        )
+    elif choice == "Blue":
+        cal.config(
+            background="#E0FFFF",
+            disabledbackground="#E0FFFF",
+            normalbackground="#E0FFFF",
+            weekendbackground="#ADD8E6",
+            selectbackground="#00BFFF",
+            selectforeground="white",
+        )
+    elif choice == "Purple":
+        cal.config(
+            background="#E6E6FA",
+            disabledbackground="#E6E6FA",
+            normalbackground="#E6E6FA",
+            weekendbackground="#D8BFD8",
+            selectbackground="#9370DB",
+            selectforeground="white",
+        )
 
 
 root= tk.Tk()
@@ -205,7 +261,6 @@ pinnednote_lbl= tk.Label(home_frame, text="Pinned Note",bg="white",font=('Arial'
 pinnednote_lbl.place(x=15,y=550)
 
 
-
 #create a box for the pinned note
 tree = ttk.Treeview(home_frame, columns=("Name",), show="headings", height=15)
 tree.heading("Name", text="File Name",)
@@ -222,6 +277,16 @@ timer_lbl.place(x=0,y=0)
 #calendar section
 calendar_lbl= tk.Label(calendar_frame,text="Calendar",bg="white",font=('Arial',30))
 calendar_lbl.place(x=0,y=0)
+setup_calendar()
+
+theme_var = tk.StringVar()
+theme_var.set("Choose Theme")  # Default text
+
+theme_options = ["Pink", "Blue", "Purple", "Custom"]
+
+theme_menu = tk.OptionMenu(calendar_frame, theme_var, *theme_options, command=apply_theme)
+theme_menu.config(font=("Arial", 12), bg="#f0f0f0")
+theme_menu.pack(pady=10)
 
 #todolist section
 todolist_lbl= tk.Label(todolist_frame,text="To- Do-List",bg="white", font=('Arial',30))
