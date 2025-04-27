@@ -6,6 +6,7 @@ from tkhtmlview import HTMLLabel
 import markdown
 import re
 from bs4 import BeautifulSoup
+import os
 
 NotepadWindow = tk.Tk() 
 NotepadWindow.title("Note Editor")
@@ -40,6 +41,7 @@ def New_File():
     Text_Box.delete("1.0", tk.END)
     # Adding in a title 
     NotepadWindow.title("New Note")
+    change_to_markdown()
     #Adding status bar for display
     Status_bar.config(text="New File    ")
     global open_status_name 
@@ -48,14 +50,28 @@ def New_File():
 # Creating a opening function
 def Opening():
     #Clearing text box
+    global Current_File_Mode
     Text_Box.delete("1.0", tk.END)
     #Grab The file name
-    text_file = filedialog.askopenfilename(initialdir="C:/Notes", title="Open a File", filetypes=(("Text Files", "*.txt"),("All Files", "*.*")))
+    text_file = filedialog.askopenfilename(initialdir="C:/Notes", title="Open a File", filetypes=(("Text Files", "*.txt"),("HTML Files", "*.html"),("Markdown Files", "*.md"),("All Files", "*.*")))
     Window_title = text_file
     #Check if there is a file name and if yes, make it global
     if text_file:
         global open_status_name 
         open_status_name = text_file
+        File_extension  =  os.path.splitext(text_file)[1].lower()
+        if File_extension == ".md":
+            Current_File_Mode = "Markdown"
+            change_to_markdown()
+        elif File_extension in [".html", ".htm"]:
+            Current_File_Mode = "HTML"
+            change_to_html()
+        elif File_extension == ".txt":
+            Current_File_Mode = "text"
+            change_to_text()
+        else:
+            # Default to text if unknown type
+            Current_File_Mode = "Markdown"
     #Updating Status bar 
     name = text_file
     Status_bar.config(text=f"{name}    ")
@@ -69,6 +85,7 @@ def Opening():
     Text_Box.insert(tk.END, File_Content)
     #Then, Close the open file
     text_file.close()
+    
 # Creating a function to save a file as (in a .txt format) 
 def Saving_File_As():
     global open_status_name 
