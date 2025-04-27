@@ -39,6 +39,7 @@ def pin_selected_note():
                 pinned_files.append(file_name)
                 tree.insert("", tk.END, values=(file_name,))
                 messagebox.showinfo("Info", f"Pinned '{file_name}' successfully!")
+                save_pinned_notes()
         else:
             messagebox.showinfo("Info", "This note is already pinned.")
 
@@ -90,13 +91,20 @@ def unpin_from_tree():
     else:
         messagebox.showinfo("Remind", "Please select a pinned note first.")
 
+def save_pinned_notes():
+    with open("pinned_notes.txt", "w") as f:# create a file if the specified file does not exist
+        for note in pinned_files:
+            f.write(note + "\n")#open if exist ,,,if no ,create a new file
 
 
 
-
-
-
-
+def load_pinned_notes():
+    if os.path.exists("pinned_notes.txt"):
+        with open("pinned_notes.txt", "r") as f:
+            for line in f:
+                note = line.strip()
+                pinned_files.append(note)
+                tree.insert("", tk.END, values=(note,))
 
 
 
@@ -109,6 +117,8 @@ root.state("zoomed")
 
 pinned_files = []
 folder_path = "C:/Notes"
+
+
 
 # Create a menu for right-click (context menu)
 listbox_menu = tk.Menu(root, tearoff=0)# tear off is the dash line in the menu list
@@ -202,6 +212,8 @@ tree.heading("Name", text="File Name",)
 tree.column("Name", width=1325)
 tree.place(x=20, y=600)
 tree.bind("<Button-3>", show_tree_menu)
+load_pinned_notes()
+
 
 #timer section
 timer_lbl= tk.Label(timer_frame, text="Timer Section", font=("Arial", 30), bg="white")
