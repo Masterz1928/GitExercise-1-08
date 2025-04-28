@@ -144,11 +144,14 @@ def insert_markdown(tag):
 
         if tag in ["**", "*"]:  # Bold or italic
             Text_Box.replace(start, end, f"{tag}{selected}{tag}{ZWSP}")
+            update_preview()
         elif tag == "<u></u>":
             Text_Box.replace(start, end, f"<u>{selected}</u>{ZWSP}")
+            update_preview()
         elif tag == "font-size":
             size = font_choice.get()
             Text_Box.replace(start, end, f'<span style="font-size:{size}px">{selected}</span>{ZWSP}')
+            update_preview()
 
         Text_Box.edit_separator()  # Mark undo boundary after the change (New checkpoint for the programm to undo)
 
@@ -391,6 +394,25 @@ def update_preview(event=None):
 # Bind the function to key release in the Text_Box
 Text_Box.bind("<KeyRelease>", update_preview)
 
+# Function to allow the scroll of both window to be the same 
+def sync_scroll(event):
+    # Get the scroll position of the Text Box
+    text_scroll = Text_Box.yview()
+    # Set the same scroll position to the preview
+    html_preview.yview_moveto(text_scroll[0])
+# Bind the Text Box vertical scroll event 
+Text_Box.bind('<MouseWheel>', sync_scroll)
+
+#Avoid the Preview from jumping around when typing 
+def sync_preview_scroll(event):
+    # Get the current vertical position of the preview
+    preview_scroll_position = html_preview.yview()[0]
+    # Update the preview with the new content
+    update_preview() 
+    # reset the scroll position
+    html_preview.yview_moveto(preview_scroll_position)
+# Use this function o update the preview as you type
+Text_Box.bind('<KeyRelease>', sync_preview_scroll)
 
 # Change the column weight for the preview frame to limit its space usage
 MainFrame.columnconfigure(1, weight=0, minsize=250)  # Reduced weight and set a minimum size for the preview frame
