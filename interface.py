@@ -111,20 +111,21 @@ def load_pinned_notes():
 # In your calendar section:
 def setup_calendar():
     global cal
-    today = date.today()  # Get today's date
+    today = date.today()
     cal = Calendar(
         calendar_frame,
         selectmode='day',
-        font=("Arial", 16),  # Make text bigger
-        cursor="hand1"  # Change cursor when hover
+        font=("Arial", 16),
+        cursor="hand1"
     )
-    cal.pack(padx=(0,50),pady=(80,90), expand=True, fill="both")  # Expand to fill available space
+    cal.pack(padx=(0,50), pady=(80,90), expand=True, fill="both")
 
 def choose_calendar_color():
     color = colorchooser.askcolor(title="Choose Calendar Color")[1]  # Open color picker and get HEX color
     if color:
         cal.config(
             background=color,
+            headersbackground=color,
             disabledbackground=color,
             normalbackground=color,
             weekendbackground=color,
@@ -137,7 +138,8 @@ def apply_theme(choice):
         choose_calendar_color()
     elif choice == "Pink":
         cal.config(
-            background="#FFE4E1",
+            background="#FFE4E1",  # Soft pink background
+            headersbackground="#FFB6C1",  # A bit stronger pink for headers
             disabledbackground="#FFE4E1",
             normalbackground="#FFE4E1",
             weekendbackground="#FFD1DC",
@@ -146,7 +148,8 @@ def apply_theme(choice):
         )
     elif choice == "Blue":
         cal.config(
-            background="#E0FFFF",
+            background="#E0FFFF",  # Light cyan background
+            headersbackground="#87CEFA",  # Sky blue headers
             disabledbackground="#E0FFFF",
             normalbackground="#E0FFFF",
             weekendbackground="#ADD8E6",
@@ -155,7 +158,8 @@ def apply_theme(choice):
         )
     elif choice == "Purple":
         cal.config(
-            background="#E6E6FA",
+            background="#E6E6FA",  # Lavender background
+            headersbackground="#D8BFD8",  # Thistle purple for headers
             disabledbackground="#E6E6FA",
             normalbackground="#E6E6FA",
             weekendbackground="#D8BFD8",
@@ -163,6 +167,40 @@ def apply_theme(choice):
             selectforeground="white",
         )
 
+#remark of the calendar
+def load_remarks():
+    if os.path.exists("remarks.txt"):
+        with open("remarks.txt", "r") as f:
+            for line in f:
+                if "|" in line:
+                    date, remark = line.strip().split("|", 1)
+                    remarks[date] = remark
+
+
+def save_remarks():
+    with open("remarks.txt", "w") as f:
+        for date, remark in remarks.items():
+            f.write(f"{date}|{remark}\n")
+
+# Save button
+def save_remark_for_date():
+    selected_date = cal.get_date()
+    remark = remark_entry.get().strip()
+    if remark:
+        remarks[selected_date] = remark
+        save_remarks()
+        messagebox.showinfo("Saved", f"Remark for {selected_date} saved.")
+    else:
+        messagebox.showwarning("Empty", "Please enter a remark.")
+
+# Show existing remark when date selected
+
+
+def display_remark_for_date(event=None):
+    selected_date = cal.get_date()
+    remark_entry.delete(0, tk.END)
+    if selected_date in remarks:
+        remark_entry.insert(0, remarks[selected_date])
 
 root= tk.Tk()
 #the title show on the top
@@ -170,7 +208,8 @@ root.title("MMU Study Buddy")
 # the size of whole window show
 root.state("zoomed")
 
-
+#dictionary & path
+remarks={}
 pinned_files = []
 folder_path = "C:/Notes"
 
@@ -288,14 +327,19 @@ theme_menu = tk.OptionMenu(calendar_frame, theme_var, *theme_options, command=ap
 theme_menu.config(font=("Arial", 12), bg="#f0f0f0")
 theme_menu.pack(pady=10)
 
+remark_entry = tk.Entry(calendar_frame, font=("Arial", 14), width=50)
+remark_entry.pack(pady=10)
+save_btn = tk.Button(calendar_frame, text="Save Remark", command=save_remark_for_date, font=("Arial", 12))
+save_btn.pack(pady=5)
+cal.bind("<<CalendarSelected>>", display_remark_for_date)
+load_remarks()
+
 #todolist section
 todolist_lbl= tk.Label(todolist_frame,text="To- Do-List",bg="white", font=('Arial',30))
 todolist_lbl.place(x=0,y=0)
 
 
 show_frame(home_frame)
-
-
 
 root.mainloop()
 
