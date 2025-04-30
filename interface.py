@@ -206,7 +206,16 @@ root= tk.Tk()
 #the title show on the top
 root.title("MMU Study Buddy")
 # the size of whole window show
-root.state("zoomed")
+root.minsize(width=800, height=700)
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+
+# Optional padding to not use full screen
+app_width = int(screen_width * 0.95)
+app_height = int(screen_height * 0.95)
+
+root.geometry(f"{app_width}x{app_height}")
+
 
 #dictionary & path
 remarks={}
