@@ -1,7 +1,7 @@
 import tkinter as tk # Getting tkinter into the program
 from tkinter import ttk
 from tkinter import filedialog
-from tkinter import messagebox
+from tkinter import messagebox  
 from tkhtmlview import HTMLLabel
 import markdown
 import re
@@ -247,7 +247,7 @@ def paste_text(e=None):
 
 
 # Toolbar Frame (Putting this first so that its top)
-ToolFrame = tk.Frame(NotepadWindow, bg="#a8a8a8", border=15)
+ToolFrame = tk.Frame(NotepadWindow, bg="#a8a8a8", highlightbackground="black", highlightthickness=1, border=15)
 ToolFrame.pack(fill="x", side="top")
 
 
@@ -281,41 +281,45 @@ text_scroll.config(command=Text_Box.yview)
 style = ttk.Style()
 
 # Define custom styles for bold, italic, and underline
-style.configure('Bold.TButton', font=('Helvetica', 10, 'bold'), padding=(5, 5))
-style.configure('Italic.TButton', font=('Helvetica', 10, 'italic'), padding=(5, 5))
-style.configure('Underline.TButton', font=('Helvetica', 10, 'underline'), padding=(5, 5))
-style.configure('Undo.TButton', font=('Helvetica', 10), padding=(10, 5))
-style.configure('Cut.TButton', font=('Helvetica', 10), padding=(10, 5))
-style.configure('Copy.TButton', font=('Helvetica', 10), padding=(10, 5))
-style.configure('Redo.TButton', font=('Helvetica', 10), padding=(10, 5))
-style.configure('Paste.TButton', font=('Helvetica', 10), padding=(10, 5))
+style.configure('Bold.TButton', font=('Helvetica', 10, 'bold'), padding=(5, 5), background="black")
+style.configure('Italic.TButton', font=('Helvetica', 10, 'italic'), padding=(5, 5), background="black")
+style.configure('Underline.TButton', font=('Helvetica', 10, 'underline'), padding=(5, 5), background="black")
+style.configure('Undo.TButton', font=('Helvetica', 10), padding=(5, 5), background="black")
+style.configure('Cut.TButton', font=('Helvetica', 10), padding=(5, 5), background="black")
+style.configure('Copy.TButton', font=('Helvetica', 10), padding=(5, 5), background="black")
+style.configure('Redo.TButton', font=('Helvetica', 10), padding=(5, 5), background="black")
+style.configure('Paste.TButton', font=('Helvetica', 10), padding=(5, 5), background="black")
+style.configure('help.TButton', font=('Helvetica', 10), padding=(5, 5), background="black")
 
 left_wrap = ttk.Frame(ToolFrame)
 left_wrap.pack(side="left", padx=(20, 0))  # only push from left
 
-bold_btn = ttk.Button(ToolFrame, text="B", style="Bold.TButton", width=10, command=lambda: insert_markdown("**"))
+bold_btn = ttk.Button(ToolFrame, text="B", style="Bold.TButton", width=5, command=lambda: insert_markdown("**"))
 bold_btn.pack(side="left", padx=10, pady=10)
 
-italic_btn = ttk.Button(ToolFrame, text="I", style="Italic.TButton", width=10, command=lambda: insert_markdown("*"))
+italic_btn = ttk.Button(ToolFrame, text="I", style="Italic.TButton", width=5, command=lambda: insert_markdown("*"))
 italic_btn.pack(side="left", padx=10, pady=10)
 
-underline_btn = ttk.Button(ToolFrame, text="U", style="Underline.TButton", width=10, command=lambda: insert_markdown("<u></u>"))
+underline_btn = ttk.Button(ToolFrame, text="U", style="Underline.TButton", width=5, command=lambda: insert_markdown("<u></u>"))
 underline_btn.pack(side="left", padx=10, pady=10)
 
-undo_button = ttk.Button(ToolFrame, text="Undo", style="Undo.TButton", width=10, command=Text_Box.edit_undo)
+undo_button = ttk.Button(ToolFrame, text="Undo", style="Undo.TButton", width=5, command=Text_Box.edit_undo)
 undo_button.pack(side="left", padx=10, pady=10)
 
-redo_button = ttk.Button(ToolFrame, text="Redo", style="Redo.TButton", width=10,  command=Text_Box.edit_redo)
+redo_button = ttk.Button(ToolFrame, text="Redo", style="Redo.TButton", width=5,  command=Text_Box.edit_redo)
 redo_button.pack(side="left", padx=10, pady=10)
 
-cut_button = ttk.Button(ToolFrame, text="Cut" , style="Cut.TButton", width=10, command=cut_text)
+cut_button = ttk.Button(ToolFrame, text="Cut", style="Cut.TButton", width=5, command=cut_text)
 cut_button.pack(side="left", padx=10, pady=10)
 
-copy_button = ttk.Button(ToolFrame, text="Copy" , style="Copy.TButton", width=10, command=copy_text)
+copy_button = ttk.Button(ToolFrame, text="Copy" , style="Copy.TButton", width=5, command=copy_text)
 copy_button.pack(side="left", padx=10, pady=10)
 
-paste_button = ttk.Button(ToolFrame, text="Paste", style="Paste.TButton", width=10, command=paste_text)
+paste_button = ttk.Button(ToolFrame, text="Paste", style="Paste.TButton", width=5, command=paste_text)
 paste_button.pack(side="left", padx=10, pady=10)
+
+help_button = ttk.Button(ToolFrame, text="Help", style="help.TButton", width=5)
+help_button.pack(side="left", padx=10, pady=10)
 
 
 def update_preview(event=None):
@@ -341,7 +345,7 @@ def update_preview(event=None):
 
     try:
         #to convert markdown into html for display
-        html_content = markdown.markdown(filtered_text, extensions=["nl2br"])
+        html_content = markdown.markdown(filtered_text, extensions=["nl2br"]) #New line to break
         # General knowledge - Parse - analyzes and interprets strings of data, breaking them down into meaningful parts according to a specific set of rules or grammar
         # We use soup to to inspect the HTML, not to drink 
         soup = BeautifulSoup(html_content, "html.parser")
