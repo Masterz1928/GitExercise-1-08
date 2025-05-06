@@ -37,7 +37,7 @@ def addtask():
             messagebox.showerror("task","no task")
         else:
             taskWdateNpriority = f"[{priority}] {task} ({date})"       
-            task_tree.insert("", "end", values=(date, task, priority))
+            task_tree.insert("", "end", values=("☐", date, task, priority))
             task_entry.delete(0, tk.END)
 def deletetask():
         whichtask = task_tree.selection()
@@ -45,6 +45,14 @@ def deletetask():
             task_tree.delete(whichtask)
         else:
              messagebox.showerror("error","no task selected")
+
+def toggle_checkbox(event):
+    selected = task_tree.selection()
+    if selected:
+        for item in selected:
+            status = list(task_tree.item(item, "values"))
+            status[0] = "☑" if status[0] == "☐" else "☐"
+            task_tree.item(item, values=status)
 
 # Create a frame for the buttons
 button_frame = tk.Frame(root)
@@ -59,13 +67,15 @@ deltask_btn.pack(side="left", padx=5)
 listbox_frame = tk.Frame(root)
 listbox_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-section = ("Date", "Task", "Priority")
+section = ("status", "Date", "Task", "Priority")
 task_tree = ttk.Treeview(listbox_frame, columns=section, show="headings")
 for col in section:
     task_tree.heading(col, text=col)
     task_tree.column(col, width=200)
 
 task_tree.pack(fill="both", expand=True)
+task_tree.bind("<Double-1>", toggle_checkbox)
+
 # Task Listbox
 #listbox_frame = tk.Frame(root)
 #listbox_frame.pack(fill="both", expand=True, padx=10, pady=10)
