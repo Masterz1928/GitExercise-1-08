@@ -2,7 +2,8 @@ import tkinter as tk
 from tkcalendar import Calendar
 from tkinter import ttk,messagebox,colorchooser
 import os
-from datetime import date
+from datetime import date,datetime
+import zipfile
 
 def show_frame(frame):
     frame.tkraise()
@@ -218,20 +219,78 @@ def clear_search():
     update_file_list()  # Show all files again
 
 
+def export_all_notes():
+    export_path = "all_notes_export.txt"
+    with open(export_path, "w", encoding="utf-8") as export_file:
+        files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
+        if not files:
+            messagebox.showinfo("Info", "No notes to export.")
+            return
+
+        for file in files:
+            file_path = os.path.join(folder_path, file)
+            export_file.write(f"\n--- {file} ---\n")
+            with open(file_path, "r", encoding="utf-8") as f:
+                export_file.write(f.read() + "\n")
+
+    messagebox.showinfo("Success", f"All notes exported to '{export_path}' successfully.")
+
+def export_notes_with_format():
+    # Ask user to choose format
+    format_choice = messagebox.askquestion("Export Format", "Export as ZIP file?\nClick 'Yes' for ZIP, 'No' for TXT")
+
+    if format_choice == "yes":
+        export_all_notes_as_zip()
+    else:
+        export_all_notes_as_txt()
+
+def export_all_notes_as_txt():
+    files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
+    if not files:
+        messagebox.showinfo("Info", "No notes to export.")
+        return
+
+    export_folder = "C:/Notes/Exports"
+    os.makedirs(export_folder, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    export_path = os.path.join(export_folder, f"exported_notes_{timestamp}.txt")
+
+    try:
+        with open(export_path, "w", encoding="utf-8") as export_file:
+            for file in files:
+                file_path = os.path.join(folder_path, file)
+                export_file.write(f"\n--- {file} ---\n")
+                with open(file_path, "r", encoding="utf-8") as f:
+                    export_file.write(f.read() + "\n")
+        messagebox.showinfo("Success", f"Notes exported to:\n{export_path}")
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to export notes:\n{e}")
+
+def export_all_notes_as_zip():
+    files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
+    if not files:
+        messagebox.showinfo("Info", "No notes to export.")
+        return
+
+    export_folder = "C:/Notes/Exports"
+    os.makedirs(export_folder, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    zip_path = os.path.join(export_folder, f"exported_notes_{timestamp}.zip")
+
+    try:
+        with zipfile.ZipFile(zip_path, 'w') as zipf:
+            for file in files:
+                file_path = os.path.join(folder_path, file)
+                zipf.write(file_path, arcname=file)
+        messagebox.showinfo("Success", f"Notes exported as ZIP to:\n{zip_path}")
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to export notes:\n{e}")
+
 root= tk.Tk()
 #the title show on the top
 root.title("MMU Study Buddy")
 # the size of whole window show
-root.minsize(width=800, height=700)
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
-
-# Optional padding to not use full screen
-app_width = int(screen_width * 0.95)
-app_height = int(screen_height * 0.95)
-
-root.geometry(f"{app_width}x{app_height}")
-
+root.state("zoomed")
 
 #dictionary & path
 remarks={}
@@ -314,14 +373,19 @@ clear_search_button.place(relx=0.9, rely=0.5, anchor="center")  # Position it ne
 update_file_list()
 
 #three button for the new, open, delete function
-btn_new = tk.Button(home_frame, text="New", font=20,relief="flat",width=30, height=5)
+btn_new = tk.Button(home_frame, text="New", font=25,relief="flat",width=28, height=5)
 btn_new.place(x=50, y=400)
 
-btn_open = tk.Button(home_frame, text="Open",font=20, relief="flat",width=30, height=5)
-btn_open.place(x=500, y=400)
+btn_open = tk.Button(home_frame, text="Open",font=25, relief="flat",width=28, height=5)
+btn_open.place(x=400, y=400)
 
-btn_delete = tk.Button(home_frame, text="Delete",font=20,relief="flat",width=30, height=5)
-btn_delete.place(x=950, y=400)
+btn_delete = tk.Button(home_frame, text="Delete",font=25,relief="flat",width=28, height=5)
+btn_delete.place(x=750, y=400)
+
+btn_export = tk.Button(home_frame, text="Export All Notes", font=25, relief="flat", width=28, height=5, command=export_notes_with_format)
+btn_export.place(x=1100, y=400)  # Adjust as needed
+
+
 
 pinnednote_lbl= tk.Label(home_frame, text="Pinned Note",bg="white",font=('Arial',25))
 pinnednote_lbl.place(x=15,y=550)
@@ -334,6 +398,7 @@ tree.column("Name", width=1325)
 tree.place(x=20, y=600)
 tree.bind("<Button-3>", show_tree_menu)
 load_pinned_notes()
+
 
 
 #timer section
