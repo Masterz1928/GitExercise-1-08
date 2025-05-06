@@ -35,10 +35,10 @@ def addtask():
         priority = priority_var.get()
         if task == "" : 
             messagebox.showerror("task","no task")
-        else:
-            taskWdateNpriority = f"[{priority}] {task} ({date})"       
-            task_tree.insert("", "end", values=("☐", date, task, priority))
+        else:     
+            task_tree.insert("", "end", values=("☐", date, task, priority), tags=(priority))
             task_entry.delete(0, tk.END)
+
 def deletetask():
         whichtask = task_tree.selection()
         if whichtask:
@@ -50,12 +50,12 @@ def togglecheckbox(event):
     selected = task_tree.selection()
     if selected:
         for item in selected:
-            values = list(task_tree.item(item, "values"))
-            if values[0] == "☐":
-                values[0] = "☑"
+            status = list(task_tree.item(item, "values"))
+            if status[0] == "☐":
+                status[0] = "☑"
             else:
-                values[0] = "☐"
-            task_tree.item(item, values=values)
+                status[0] = "☐"
+            task_tree.item(item, values=status)
 
 # Create a frame for the buttons
 button_frame = tk.Frame(root)
@@ -78,6 +78,9 @@ for col in section:
 
 task_tree.pack(fill="both", expand=True)
 task_tree.bind("<Double-1>", togglecheckbox)
+task_tree.tag_configure("High", background="#ff9999")   
+task_tree.tag_configure("Medium", background="#ffff99")  
+task_tree.tag_configure("Low", background="#ccffcc")     
 
 # Task Listbox
 #listbox_frame = tk.Frame(root)
