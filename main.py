@@ -147,14 +147,14 @@ def insert_markdown(tag):
 
         if tag in ["**", "*"]:  # Bold or italic
             Text_Box.replace(start, end, f"{tag}{selected}{tag}{ZWSP}")
-            #update_preview()
+            update_preview()
         elif tag == "<u></u>":
             Text_Box.replace(start, end, f"<u>{selected}</u>{ZWSP}")
-            #update_preview()
+            update_preview()
         elif tag == "font-size":
             size = font_choice.get()
             Text_Box.replace(start, end, f'<span style="font-size:{size}px">{selected}</span>{ZWSP}')
-            #update_preview()
+            update_preview()
 
         Text_Box.edit_separator()  # Mark undo boundary after the change (New checkpoint for the programm to undo)
 
