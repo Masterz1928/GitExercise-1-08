@@ -59,13 +59,13 @@ def togglecheckbox(event):
 
 # Create a frame for the buttons
 button_frame = tk.Frame(root)
-button_frame.pack(pady=10)
+button_frame.pack(pady=10, fill="x")
 
 addtask_btn = tk.Button(button_frame, text="Add Task", command=addtask)
-addtask_btn.pack(side="left", padx=5)
+addtask_btn.pack(side="left", padx=10, pady=5) 
 
 deltask_btn = tk.Button(button_frame, text="Delete Task", command=deletetask)
-deltask_btn.pack(side="left", padx=5)
+deltask_btn.pack(side="left", padx=10, pady=5)
 
 listbox_frame = tk.Frame(root)
 listbox_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -82,6 +82,15 @@ task_tree.tag_configure("High", background="#ff9999")
 task_tree.tag_configure("Medium", background="#ffff99")  
 task_tree.tag_configure("Low", background="#ccffcc")     
 
+def completion_tracker():
+    completiontracker = tk.Toplevel(root)  
+    completiontracker.title("New Window")
+    completiontracker.geometry("400x300")
+    label = tk.Label(completiontracker, text="This is a new window!")
+    label.pack(pady=50)
+
+completion_tracker_btn = tk.Button(button_frame, text="Completion Tracker", command=completion_tracker)
+completion_tracker_btn.pack(side="right", padx=10, pady=5)
 # Task Listbox
 #listbox_frame = tk.Frame(root)
 #listbox_frame.pack(fill="both", expand=True, padx=10, pady=10)
