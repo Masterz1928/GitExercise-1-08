@@ -202,6 +202,22 @@ def display_remark_for_date(event=None):
     if selected_date in remarks:
         remark_entry.insert(0, remarks[selected_date])
 
+
+def search_notes(event=None):
+    search_term = search_entry.get().lower()  # Get search term and make it lowercase for case-insensitive comparison
+    file_listbox.delete(0, tk.END)  # Clear the current list in the listbox
+
+    # Loop through all files and add those that match the search term
+    files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
+    for file in files:
+        if search_term in file.lower():  # Case-insensitive comparison
+            file_listbox.insert(tk.END, file)
+
+def clear_search():
+    search_entry.delete(0, tk.END)  # Clear the search bar
+    update_file_list()  # Show all files again
+
+
 root= tk.Tk()
 #the title show on the top
 root.title("MMU Study Buddy")
@@ -282,7 +298,9 @@ tree_menu = tk.Menu(root, tearoff=0)
 tree_menu.add_command(label="Unpin", command=lambda: unpin_from_tree())
 
 file_listbox.bind("<Button-3>", show_listbox_menu)# the right click function and bind with the show_list_menu function
-
+search_entry.bind("<KeyRelease>", search_notes)
+clear_search_button = tk.Button(top_frame, text="Clear", command=clear_search)
+clear_search_button.place(relx=0.9, rely=0.5, anchor="center")  # Position it next to the search bar
 
 update_file_list()
 
@@ -333,6 +351,9 @@ save_btn = tk.Button(calendar_frame, text="Save Remark", command=save_remark_for
 save_btn.pack(pady=5)
 cal.bind("<<CalendarSelected>>", display_remark_for_date)
 load_remarks()
+
+
+
 
 #todolist section
 todolist_lbl= tk.Label(todolist_frame,text="To- Do-List",bg="white", font=('Arial',30))
