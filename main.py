@@ -46,13 +46,16 @@ def deletetask():
         else:
              messagebox.showerror("error","no task selected")
 
-def toggle_checkbox(event):
+def togglecheckbox(event):
     selected = task_tree.selection()
     if selected:
         for item in selected:
-            status = list(task_tree.item(item, "values"))
-            status[0] = "☑" if status[0] == "☐" else "☐"
-            task_tree.item(item, values=status)
+            values = list(task_tree.item(item, "values"))
+            if values[0] == "☐":
+                values[0] = "☑"
+            else:
+                values[0] = "☐"
+            task_tree.item(item, values=values)
 
 # Create a frame for the buttons
 button_frame = tk.Frame(root)
@@ -74,7 +77,7 @@ for col in section:
     task_tree.column(col, width=200)
 
 task_tree.pack(fill="both", expand=True)
-task_tree.bind("<Double-1>", toggle_checkbox)
+task_tree.bind("<Double-1>", togglecheckbox)
 
 # Task Listbox
 #listbox_frame = tk.Frame(root)
