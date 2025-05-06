@@ -72,9 +72,15 @@ listbox_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
 section = ("status", "Date", "Task", "Priority")
 task_tree = ttk.Treeview(listbox_frame, columns=section, show="headings")
-for col in section:
-    task_tree.heading(col, text=col)
-    task_tree.column(col, width=200)
+
+task_tree.heading("status", text="Status")
+task_tree.column("status", width=50, stretch=tk.NO) 
+task_tree.heading("Date", text="Date")
+task_tree.column("Date", width=100, stretch=tk.NO)  
+task_tree.heading("Task", text="Task")
+task_tree.column("Task", width=300, stretch=tk.YES)  
+task_tree.heading("Priority", text="Priority")
+task_tree.column("Priority", width=100, stretch=tk.NO)
 
 task_tree.pack(fill="both", expand=True)
 task_tree.bind("<Double-1>", togglecheckbox)
@@ -84,17 +90,12 @@ task_tree.tag_configure("Low", background="#ccffcc")
 
 def completion_tracker():
     completiontracker = tk.Toplevel(root)  
-    completiontracker.title("New Window")
+    completiontracker.title("Completion Tracker")
     completiontracker.geometry("400x300")
-    label = tk.Label(completiontracker, text="This is a new window!")
+    label = tk.Label(completiontracker, text="hi!")
     label.pack(pady=50)
 
 completion_tracker_btn = tk.Button(button_frame, text="Completion Tracker", command=completion_tracker)
 completion_tracker_btn.pack(side="right", padx=10, pady=5)
-# Task Listbox
-#listbox_frame = tk.Frame(root)
-#listbox_frame.pack(fill="both", expand=True, padx=10, pady=10)
-#task_listbox = tk.Listbox(listbox_frame)
-#task_listbox.pack(fill="both", expand=True)
 
 root.mainloop()
