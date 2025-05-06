@@ -344,56 +344,63 @@ def update_preview(event=None):
 
     filtered_text = "\n".join(safe_lines)
 
-    try:
-        #to convert markdown into html for display
-        html_content = markdown.markdown(filtered_text, extensions=["nl2br"]) #New line to break
-        # General knowledge - Parse - analyzes and interprets strings of data, breaking them down into meaningful parts according to a specific set of rules or grammar
-        # We use soup to to inspect the HTML, not to drink 
-        soup = BeautifulSoup(html_content, "html.parser")
-        # Make a list of the halal styles that we aallow the program to use  
-        # Adding in an if statement that filters out tags depending on the program's mode  
-        if Current_File_Mode == "Markdown":
-            ALLOWED_STYLES = ["font-size", "color"]
-        elif Current_File_Mode == "html":
-            ALLOWED_STYLES = ["font-size", "color", "background", "border", "margin", "padding"]
-        else:
-            ALLOWED_STYLES = []  # for pure text, no styles at all
+    if Current_File_Mode == "Markdown":
+        try:
+            #to convert markdown into html for display
+            html_content = markdown.markdown(filtered_text, extensions=["nl2br"]) #New line to break
+            # General knowledge - Parse - analyzes and interprets strings of data, breaking them down into meaningful parts according to a specific set of rules or grammar
+            # We use soup to to inspect the HTML, not to drink 
+            soup = BeautifulSoup(html_content, "html.parser")
+            # Make a list of the halal styles that we aallow the program to use  
+            # Adding in an if statement that filters out tags depending on the program's mode  
+            if Current_File_Mode == "Markdown":
+                ALLOWED_STYLES = ["font-size", "color"]
+            elif Current_File_Mode == "html":
+                ALLOWED_STYLES = ["font-size", "color", "background", "border", "margin", "padding"]
+            else:
+                ALLOWED_STYLES = []  # for pure text, no styles at all
+                for tag in soup.find_all(True):
+                    tag.unwrap() # Removes tags, keep content
+            #Find all the tags in the program 
             for tag in soup.find_all(True):
-                tag.unwrap() # Removes tags, keep content
-        #Find all the tags in the program 
-        for tag in soup.find_all(True):
-            # check if style attribute is present 
-            if "style" in tag.attrs:
-                # split the string into individual parts
-                # example
-                #tag[style] does --> "font-size:12px; color:red; background:black;"
-                # the split thing does --> ["font-size:12px", "color:red", "background:black"]
-                styles = tag["style"].split(";")
-                clean_styles = []
-                # now we loop in the styles we have gotten 
-                for s in styles:
-                    # remove whitespaces 
-                    s = s.strip()
-                    #Check is the sstyle is halal or haram 
-                    for allowed in ALLOWED_STYLES:
-                        # if halal ?
-                        if s.startswith(allowed):
-                            # we keep it 
-                            clean_styles.append(s)
-                # if there any suitable tags remaining, then we rebuild it together with the ";"
-                if clean_styles:
-                    tag["style"] = "; ".join(clean_styles)
-                #Otherwise remove it completely 
-                else:
-                    del tag["style"]
-                
-        # Convert Soup to String
-        final_html = str(soup)
-        #update the html Preview 
-        html_preview.set_html(final_html)
-    #Catch any errors then print it out 
-    except Exception as e:
-        print(f"Error generating HTML preview: {e}")
+                # check if style attribute is present 
+                if "style" in tag.attrs:
+                    # split the string into individual parts
+                    # example
+                    #tag[style] does --> "font-size:12px; color:red; background:black;"
+                    # the split thing does --> ["font-size:12px", "color:red", "background:black"]
+                    styles = tag["style"].split(";")
+                    clean_styles = []
+                    # now we loop in the styles we have gotten 
+                    for s in styles:
+                        # remove whitespaces 
+                        s = s.strip()
+                        #Check is the sstyle is halal or haram 
+                        for allowed in ALLOWED_STYLES:
+                            # if halal ?
+                            if s.startswith(allowed):
+                                # we keep it 
+                                clean_styles.append(s)
+                    # if there any suitable tags remaining, then we rebuild it together with the ";"
+                    if clean_styles:
+                        tag["style"] = "; ".join(clean_styles)
+                    #Otherwise remove it completely 
+                    else:
+                        del tag["style"]
+                    
+            # Convert Soup to String
+            final_html = str(soup)
+            #update the html Preview 
+            html_preview.set_html(final_html)
+    
+        #Catch any errors then print it out 
+        except Exception as e:
+            print(f"Error generating HTML preview: {e}")
+
+    
+    elif Current_File_Mode == "HTML":
+        # For HTML mode, we don't convert, just send raw HTML to the preview widget
+        html_preview.set_html(markdown_text)  # Directly display HTML content in preview
 
 
 # Bind the function to key release in the Text_Box
