@@ -29,7 +29,7 @@ priority_var.set("Medium")
 priority_menu = tk.OptionMenu(input_frame, priority_var, "High", "Medium", "Low")
 priority_menu.grid(row=0, column=3, padx=5, pady=5, sticky="w")
 
-def addtask():
+def addtask(event = None):
         date = time.strftime("%Y-%m-%d")
         task = task_entry.get()
         priority = priority_var.get()
@@ -84,9 +84,12 @@ task_tree.column("Priority", width=100, stretch=tk.NO)
 
 task_tree.pack(fill="both", expand=True)
 task_tree.bind("<Double-1>", togglecheckbox)
+
 task_tree.tag_configure("High", background="#ff9999")   
 task_tree.tag_configure("Medium", background="#ffff99")  
 task_tree.tag_configure("Low", background="#ccffcc")     
+
+task_entry.bind("<Return>", addtask)
 
 def completion_tracker():
     completiontracker = tk.Toplevel(root)  
