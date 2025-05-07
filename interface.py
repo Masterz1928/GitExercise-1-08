@@ -373,7 +373,7 @@ for text, frame in nav_buttons:
 
 ##section note
 #show the location and the feature of the fonts showed
-note_lbl= tk.Label(home_frame, text="All Note",font=('Arial',30))
+note_lbl= tk.Label(home_frame, text="All Note",font=('Arial',30),bg="white")
 note_lbl.place(x=15,y=0)
 
 file_listbox = tk.Listbox(home_frame, width=221,height=20)
@@ -392,18 +392,18 @@ update_file_list()
 
 #three button for the new, open, delete function
 button_frame = tk.Frame(home_frame, bg="white")
-button_frame.pack(pady=30)
+button_frame.pack(pady=15)
 
-btn_new = tk.Button(button_frame, text="New", font=25, relief="flat", width=20, height=2)
+btn_new = tk.Button(button_frame, text="New", font=25, relief="flat", width=20, height=3)
 btn_new.pack(side="left", padx=10)
 
-btn_open = tk.Button(button_frame, text="Open", font=25, relief="flat", width=20, height=2)
+btn_open = tk.Button(button_frame, text="Open", font=25, relief="flat", width=20, height=3)
 btn_open.pack(side="left", padx=10)
 
-btn_delete = tk.Button(button_frame, text="Delete", font=25, relief="flat", width=20, height=2)
+btn_delete = tk.Button(button_frame, text="Delete", font=25, relief="flat", width=20, height=3)
 btn_delete.pack(side="left", padx=10)
 
-btn_export = tk.Button(button_frame, text="Export All Notes", font=25, relief="flat", width=20, height=2, command=export_notes_with_format)
+btn_export = tk.Button(button_frame, text="Export All Notes", font=25, relief="flat", width=20, height=3, command=export_notes_with_format)
 btn_export.pack(side="left", padx=10)# Adjust as needed
 
 
