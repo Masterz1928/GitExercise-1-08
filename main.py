@@ -250,7 +250,7 @@ def paste_text(e=None):
 def count_words():
     text = Text_Box.get("1.0", tk.END)  # Get all the text
     words = text.split()
-    word_count = len(words)
+    word_count = len(words) # Gets the number of words 
     
     lines = text.split('\n')
     line_count = len(lines) - 1  # Subtract 1 because of the extra newline at the end
@@ -264,6 +264,45 @@ def count_words():
 def on_release(event):
     sync_preview_scroll(event)
     count_words()
+
+def help_guide(event=None):
+    help_win = tk.Toplevel() #create a Toplevel 
+    help_win.title("Notepad Help")
+    help_win.geometry("400x300")
+
+    notebook = ttk.Notebook(help_win) #tab manager widget
+    notebook.pack(fill="both", expand=True) #file whole window
+
+    # Tab 1: File Settings
+    tab1 = ttk.Frame(notebook) #Creatre a frame to act as the first tab 
+    notebook.add(tab1, text="File Settings") #Adds it to the notebook with as "File SEttings"
+    tk.Label(tab1, text=(
+        "1) Markdown - All features are available.\n"
+        "2) HTML - Use HTML tags, no Markdown.\n"
+        "3) Text - Regular text files."
+    ), justify="left", padx=10, pady=10).pack(anchor="w") # Allgin to the left 
+
+    # Tab 2: Shortcuts
+    tab2 = ttk.Frame(notebook) 
+    notebook.add(tab2, text="Shortcuts")
+    tk.Label(tab2, text=(
+        "Ctrl+B - Bold\n"
+        "Ctrl+P - Italic \n"
+        "Ctrl+U - Underline\n"
+        "Ctrl+S - Save\n"
+        "Ctrl+O - Open"
+    ), justify="left", padx=10, pady=10).pack(anchor="w")
+
+    # Tab 3: Preview Info
+    tab3 = ttk.Frame(notebook)
+    notebook.add(tab3, text="Preview")
+    tk.Label(tab3, text=(
+        "• Preview updates automatically on save.\n"
+        "• Supports Markdown and HTML preview.\n"
+        "• Some advanced tags may not render fully."
+    ), justify="left", padx=10, pady=10).pack(anchor="w")
+
+
 
 # Toolbar Frame (Putting this first so that its top)
 ToolFrame = tk.Frame(NotepadWindow, bg="#a8a8a8", highlightbackground="black", highlightthickness=1, border=15)
@@ -337,7 +376,7 @@ copy_button.pack(side="left", padx=10, pady=10)
 paste_button = ttk.Button(ToolFrame, text="Paste", style="Paste.TButton", width=5, command=paste_text)
 paste_button.pack(side="left", padx=10, pady=10)
 
-help_button = ttk.Button(ToolFrame, text="Help", style="help.TButton", width=5)
+help_button = ttk.Button(ToolFrame, text="Help", style="help.TButton", width=5, command=help_guide)
 help_button.pack(side="left", padx=10, pady=10)
 
 
@@ -489,8 +528,8 @@ TopMenuBar.add_cascade(label="Edit", menu=edit_menu)
 edit_menu.add_command(label="Cut    Ctrl+X", command=lambda: cut_text(False))
 edit_menu.add_command(label="Copy   Ctrl+C", command=lambda: copy_text(False))
 edit_menu.add_command(label="Paste  Ctrl+V", command=lambda: paste_text(False))
-edit_menu.add_command(label="Undo", command=Text_Box.edit_undo)
-edit_menu.add_command(label="Redo", command=Text_Box.edit_redo)
+edit_menu.add_command(label="Undo  Ctrl+z", command=Text_Box.edit_undo)
+edit_menu.add_command(label="Redo  Ctrl+r", command=Text_Box.edit_redo)
 
 #Adding File setting Menu 
 File_Settings_Menu = tk.Menu(TopMenuBar, tearoff=False)
@@ -515,5 +554,6 @@ NotepadWindow.bind("<Control-Key-v>", paste_text)
 NotepadWindow.bind("<Control-b>", lambda event: insert_markdown("**"))
 NotepadWindow.bind("<Control-p>", lambda event: insert_markdown("*"))
 NotepadWindow.bind("<Control-u>", lambda event: insert_markdown("<u></u>"))
+NotepadWindow.bind("<F1>", help_guide)
 
 NotepadWindow.mainloop()
