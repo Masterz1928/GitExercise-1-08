@@ -237,34 +237,13 @@ def export_all_notes():
 
 def export_notes_with_format():
     # Ask user to choose format
-    format_choice = messagebox.askquestion("Export Format", "Export as ZIP file?\nClick 'Yes' for ZIP, 'No' for TXT")
+    format_choice = messagebox.askquestion("Export Format", "Export as ZIP file?")
 
     if format_choice == "yes":
         export_all_notes_as_zip()
     else:
-        export_all_notes_as_txt()
+        None
 
-def export_all_notes_as_txt():
-    files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
-    if not files:
-        messagebox.showinfo("Info", "No notes to export.")
-        return
-
-    export_folder = "C:/Notes/Exports"
-    os.makedirs(export_folder, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    export_path = os.path.join(export_folder, f"exported_notes_{timestamp}.txt")
-
-    try:
-        with open(export_path, "w", encoding="utf-8") as export_file:
-            for file in files:
-                file_path = os.path.join(folder_path, file)
-                export_file.write(f"\n--- {file} ---\n")
-                with open(file_path, "r", encoding="utf-8") as f:
-                    export_file.write(f.read() + "\n")
-        messagebox.showinfo("Success", f"Notes exported to:\n{export_path}")
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to export notes:\n{e}")
 
 def export_all_notes_as_zip():
     files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
@@ -358,6 +337,9 @@ content_area.pack(expand=True, fill="both")
 
 # Create different frames for each own section
 home_frame = tk.Frame(content_area, bg="white")
+home_scroll= ttk.Scrollbar(home_frame)
+home_scroll.pack(side="right",fill="y",expand= True)
+
 timer_frame = tk.Frame(content_area, bg="white")
 calendar_frame = tk.Frame(content_area, bg="white")
 todolist_frame = tk.Frame(content_area, bg="white")
@@ -395,7 +377,7 @@ note_lbl= tk.Label(home_frame, text="All Note",font=('Arial',30))
 note_lbl.place(x=15,y=0)
 
 file_listbox = tk.Listbox(home_frame, width=221,height=20)
-file_listbox.place(x=20,y=60)
+file_listbox.pack(padx=5,pady=50)
 
 
 tree_menu = tk.Menu(root, tearoff=0)
@@ -409,17 +391,20 @@ clear_search_button.place(relx=0.9, rely=0.5, anchor="center")  # Position it ne
 update_file_list()
 
 #three button for the new, open, delete function
-btn_new = tk.Button(home_frame, text="New", font=25,relief="flat",width=28, height=5)
-btn_new.place(x=50, y=400)
+button_frame = tk.Frame(home_frame, bg="white")
+button_frame.pack(pady=30)
 
-btn_open = tk.Button(home_frame, text="Open",font=25, relief="flat",width=28, height=5)
-btn_open.place(x=400, y=400)
+btn_new = tk.Button(button_frame, text="New", font=25, relief="flat", width=20, height=2)
+btn_new.pack(side="left", padx=10)
 
-btn_delete = tk.Button(home_frame, text="Delete",font=25,relief="flat",width=28, height=5)
-btn_delete.place(x=750, y=400)
+btn_open = tk.Button(button_frame, text="Open", font=25, relief="flat", width=20, height=2)
+btn_open.pack(side="left", padx=10)
 
-btn_export = tk.Button(home_frame, text="Export All Notes", font=25, relief="flat", width=28, height=5, command=export_notes_with_format)
-btn_export.place(x=1100, y=400)  # Adjust as needed
+btn_delete = tk.Button(button_frame, text="Delete", font=25, relief="flat", width=20, height=2)
+btn_delete.pack(side="left", padx=10)
+
+btn_export = tk.Button(button_frame, text="Export All Notes", font=25, relief="flat", width=20, height=2, command=export_notes_with_format)
+btn_export.pack(side="left", padx=10)# Adjust as needed
 
 
 
@@ -428,7 +413,7 @@ pinnednote_lbl.place(x=15,y=550)
 
 
 #create a box for the pinned note
-tree = ttk.Treeview(home_frame, columns=("Name",), show="headings", height=15)
+tree = ttk.Treeview(home_frame, columns=("Name",), show="headings", height=10)
 tree.heading("Name", text="File Name",)
 tree.column("Name", width=1325)
 tree.place(x=20, y=600)
