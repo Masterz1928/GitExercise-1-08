@@ -286,6 +286,41 @@ def export_all_notes_as_zip():
     except Exception as e:
         messagebox.showerror("Error", f"Failed to export notes:\n{e}")
 
+def perform_advanced_search():
+    query = search_entry.get().strip().lower()
+    if not query:
+        messagebox.showinfo("Search", "Please enter a keyword.")
+        return
+
+    results = []
+
+    # Search in file names and contents
+    for file_name in os.listdir(folder_path):
+        if file_name.endswith(".txt"):
+            file_path = os.path.join(folder_path, file_name)
+
+            # Match file name
+            if query in file_name.lower():
+                results.append(f"File Name Match: {file_name}")
+
+            # Match file content
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                if query in content.lower():
+                    results.append(f"Content Match in {file_name}")
+
+    # Search in calendar remarks
+    for date_str, remark in remarks.items():
+        if query in remark.lower():
+            results.append(f"Remark Match: {date_str} - {remark}")
+
+    # Show results
+    if results:
+        result_text = "\n".join(results)
+        messagebox.showinfo("Search Results", result_text)
+    else:
+        messagebox.showinfo("Search", "No matches found.")
+
 root= tk.Tk()
 #the title show on the top
 root.title("MMU Study Buddy")
@@ -312,6 +347,7 @@ top_frame.pack(side="top", fill="x")
 
 # show the searchbar in the frame
 search_entry = tk.Entry(top_frame, width=50, font=('Aptos', 15))
+search_entry.bind("<Return>", lambda event: perform_advanced_search())
 
 # show the sidebar
 sidebar = tk.Frame(root, width=120, bg="#f1efec")
