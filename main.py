@@ -60,9 +60,18 @@ def togglecheckbox(event):
                 status[0] = "☑"
                 completed_task.append(status)
                 task_tree.delete(task)
-            else:   
+
+completed_tasktree = None
+
+def undo_completedtask(event):
+    selected = completed_tasktree.selection()
+    if selected:
+        for task in selected:
+            status = list(completed_tasktree.item(task, "values"))
+            if status[0] == "☑":
                 status[0] = "☐"
-            task_tree.item(task, values=status)
+                task_tree.insert("", "end", values=status)
+                completed_tasktree.delete(task)
 
 button_frame = tk.Frame(root)
 button_frame.pack(pady=10, fill="x")
@@ -98,6 +107,7 @@ task_tree.tag_configure("Low", background="#ccffcc")
 task_entry.bind("<Return>", addtask)
 
 def completion_tracker():
+    global completed_tasktree
     completiontracker = tk.Toplevel(root)  
     completiontracker.title("Completion Tracker")
     completiontracker.geometry("500x500")
@@ -122,6 +132,7 @@ def completion_tracker():
             completed_tasktree.insert("", "end", values=task)
 
         completed_tasktree.pack(fill="both", expand=True, padx=10, pady=10)
+        completed_tasktree.bind("<Double-1>", undo_completedtask)
 
 completion_tracker_btn = tk.Button(button_frame, text="Completion Tracker", command=completion_tracker)
 completion_tracker_btn.pack(side="right", padx=10, pady=5)
