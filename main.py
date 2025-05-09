@@ -266,43 +266,66 @@ def on_release(event):
     count_words()
 
 def help_guide(event=None):
-    help_win = tk.Toplevel() #create a Toplevel 
+    help_win = tk.Toplevel()  # create a Toplevel window
     help_win.title("Notepad Help")
     help_win.geometry("400x300")
 
-    notebook = ttk.Notebook(help_win) #tab manager widget
-    notebook.pack(fill="both", expand=True) #file whole window
+    # Custom style for active tab
+    style = ttk.Style(help_win)
+
+    style.map("TNotebook.Tab",
+              background=[("selected", "lightblue")])  # Active tab color
+
+    notebook = ttk.Notebook(help_win)  # tab manager widget
+    notebook.pack(fill="both", expand=True)  # fill the whole window
 
     # Tab 1: File Settings
-    tab1 = ttk.Frame(notebook) #Creatre a frame to act as the first tab 
-    notebook.add(tab1, text="File Settings") #Adds it to the notebook with as "File SEttings"
-    tk.Label(tab1, text=(
+    tab1 = ttk.Frame(notebook)  # Create a frame to act as the first tab
+    notebook.add(tab1, text="File Settings")  # Adds it to the notebook with "File Settings"
+    
+    # Create the label
+    Tab1Text = tk.Label(tab1, text=(
         "1) Markdown - All features are available.\n"
         "2) HTML - Use HTML tags, no Markdown.\n"
         "3) Text - Regular text files."
-    ), justify="left", padx=10, pady=10).pack(anchor="w") # Allgin to the left 
+    ), justify="left", padx=10, pady=10)
+    
+    # Set the font size
+    Tab1Text.config(font=("Segoe UI", 15))  # Apply font before packing
+    # Pack the label
+    Tab1Text.pack(anchor="w")
 
     # Tab 2: Shortcuts
     tab2 = ttk.Frame(notebook) 
     notebook.add(tab2, text="Shortcuts")
-    tk.Label(tab2, text=(
+    
+    Tab2Text = tk.Label(tab2, text=(
         "Ctrl+B - Bold\n"
         "Ctrl+P - Italic \n"
         "Ctrl+U - Underline\n"
         "Ctrl+S - Save\n"
         "Ctrl+O - Open"
-    ), justify="left", padx=10, pady=10).pack(anchor="w")
+    ), justify="left", padx=10, pady=10)
+    
+    # Set the font size
+    Tab2Text.config(font=("Segoe UI", 15))  # Apply font before packing
+    # Pack the label
+    Tab2Text.pack(anchor="w")
 
     # Tab 3: Preview Info
     tab3 = ttk.Frame(notebook)
     notebook.add(tab3, text="Preview")
-    tk.Label(tab3, text=(
+    
+    Tab3Text = tk.Label(tab3, text=(
         "• Preview updates automatically on save.\n"
         "• Supports Markdown and HTML preview.\n"
         "• Some advanced tags may not render fully."
-    ), justify="left", padx=10, pady=10).pack(anchor="w")
-
-
+    ), justify="left", padx=10, pady=10)
+    
+    # Set the font size
+    Tab3Text.config(font=("Segoe UI", 15))  # Apply font before packing
+    # Pack the label
+    Tab3Text.pack(anchor="w")
 
 # Toolbar Frame (Putting this first so that its top)
 ToolFrame = tk.Frame(NotepadWindow, bg="#a8a8a8", highlightbackground="black", highlightthickness=1, border=15)
