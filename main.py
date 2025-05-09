@@ -9,7 +9,8 @@ import re
 from bs4 import BeautifulSoup
 import os
 
-def run_notepad():
+def run_notepad(file_content=""):
+    global Text_Box
     NotepadWindow = tk.Toplevel() 
     NotepadWindow.title("Note Editor")
     NotepadWindow.config(bg="#a8a8a9")
@@ -34,6 +35,7 @@ def run_notepad():
     Current_File_Mode = "Markdown"
 
     # Set Folder for Notes Location
+    global folder_path
     folder_path = "C:/Notes"
 
     #Creating Functions Here
@@ -578,6 +580,29 @@ def run_notepad():
     NotepadWindow.bind("<Control-u>", lambda event: insert_markdown("<u></u>"))
     NotepadWindow.bind("<F1>", help_guide)
 
+def open_note_in_notepad(file_path):
+    # Open the notepad window with content from the file
+    try:
+        with open(file_path, "r") as file:
+            file_content = file.read()
+    except Exception as e:
+        print(f"Error opening file: {e}")
+        file_content = f"Error: {e}"
+
+    # Call run_notepad with file content
+    run_notepad(file_content)
+    Text_Box.insert(tk.END, file_content)
+
+# Example button click to open a file
+def open_file_button_clicked():
+    selected_file = file_listbox.curselection()  # Get the selected file in the Listbox
+    if selected_file:
+        file_name = file_listbox.get(selected_file[0])  # Get file name from listbox
+        file_path = os.path.join(folder_path, file_name)  # Combine folder and file name to get full path
+        file_path = os.path.abspath(file_path)  # Get absolute path to avoid issues
+        open_note_in_notepad(file_path)
+
+
 
 def show_frame(frame):
     frame.tkraise()
@@ -983,7 +1008,7 @@ button_frame.pack(pady=15)
 btn_new = tk.Button(button_frame, text="New", font=25, relief="flat", width=20, height=3, command=run_notepad)
 btn_new.pack(side="left", padx=20)
 
-btn_open = tk.Button(button_frame, text="Open", font=25, relief="flat", width=20, height=3)
+btn_open = tk.Button(button_frame, text="Open", font=25, relief="flat", width=20, height=3, command=open_file_button_clicked)
 btn_open.pack(side="left", padx=20)
 
 btn_delete = tk.Button(button_frame, text="Delete", font=25, relief="flat", width=20, height=3,command=deleting_notes)
