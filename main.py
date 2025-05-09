@@ -13,21 +13,24 @@ root.geometry("800x800")
 input_frame = tk.Frame(root)
 input_frame.pack(pady=10, fill="x") 
 
-# Task 
 task_label = tk.Label(input_frame, text="Task")
 task_label.grid(row=0, column=0, padx=5, pady=5, sticky="w")
 
 task_entry = tk.Entry(input_frame, width=40)
 task_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")  
 
-# Priority 
 priority_label = tk.Label(input_frame, text="Priority")
 priority_label.grid(row=0, column=2, padx=5, pady=5, sticky="w")
 
 priority_var = StringVar()
 priority_var.set("Medium")
-priority_menu = tk.OptionMenu(input_frame, priority_var, "High", "Medium", "Low")
-priority_menu.grid(row=0, column=3, padx=5, pady=5, sticky="w")
+
+priority_frame = tk.Frame(input_frame)
+priority_frame.grid(row=0, column=3, padx=5, pady=5, sticky="w")
+
+tk.Radiobutton(priority_frame, text="High", variable=priority_var, value="High").pack(side="left")
+tk.Radiobutton(priority_frame, text="Medium", variable=priority_var, value="Medium").pack(side="left")
+tk.Radiobutton(priority_frame, text="Low", variable=priority_var, value="Low").pack(side="left")
 
 def addtask(event = None):
         date = time.strftime("%Y-%m-%d")
@@ -57,7 +60,6 @@ def togglecheckbox(event):
                 status[0] = "☐"
             task_tree.item(item, values=status)
 
-# Create a frame for the buttons
 button_frame = tk.Frame(root)
 button_frame.pack(pady=10, fill="x")
 
