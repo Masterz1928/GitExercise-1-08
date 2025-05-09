@@ -22,11 +22,11 @@ task_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")
 priority_label = tk.Label(input_frame, text="Priority")
 priority_label.grid(row=0, column=2, padx=5, pady=5, sticky="w")
 
-priority_var = StringVar()
-priority_var.set("Medium")
-
 priority_frame = tk.Frame(input_frame)
 priority_frame.grid(row=0, column=3, padx=5, pady=5, sticky="w")
+
+priority_var = StringVar()
+priority_var.set("Medium")
 
 tk.Radiobutton(priority_frame, text="High", variable=priority_var, value="High").pack(side="left")
 tk.Radiobutton(priority_frame, text="Medium", variable=priority_var, value="Medium").pack(side="left")
@@ -49,16 +49,20 @@ def deletetask():
         else:
              messagebox.showerror("error","no task selected")
 
+completed_task = []
+
 def togglecheckbox(event):
     selected = task_tree.selection()
     if selected:
-        for item in selected:
-            status = list(task_tree.item(item, "values"))
+        for task in selected:
+            status = list(task_tree.item(task, "values"))
             if status[0] == "☐":
                 status[0] = "☑"
-            else:
+                completed_task.append(status)
+                task_tree.delete(task)
+            else:   
                 status[0] = "☐"
-            task_tree.item(item, values=status)
+            task_tree.item(task, values=status)
 
 button_frame = tk.Frame(root)
 button_frame.pack(pady=10, fill="x")
@@ -96,9 +100,28 @@ task_entry.bind("<Return>", addtask)
 def completion_tracker():
     completiontracker = tk.Toplevel(root)  
     completiontracker.title("Completion Tracker")
-    completiontracker.geometry("400x300")
-    label = tk.Label(completiontracker, text="hi!")
-    label.pack(pady=50)
+    completiontracker.geometry("500x500")
+    
+    if not completed_task:
+        label = tk.Label(completiontracker, text="No completed tasks yet.")
+        label.pack(pady=20)
+        return
+    
+    else:
+        completed_tasktree = ttk.Treeview(completiontracker, columns=section, show="headings")
+        completed_tasktree.heading("status", text="Status")
+        completed_tasktree.column("status", width=50, stretch=tk.NO) 
+        completed_tasktree.heading("Date", text="Date")
+        completed_tasktree.column("Date", width=70, stretch=tk.NO)  
+        completed_tasktree.heading("Task", text="Task")
+        completed_tasktree.column("Task", width=100, stretch=tk.YES)  
+        completed_tasktree.heading("Priority", text="Priority")
+        completed_tasktree.column("Priority", width=80, stretch=tk.NO)
+
+        for task in completed_task:
+            completed_tasktree.insert("", "end", values=task)
+
+        completed_tasktree.pack(fill="both", expand=True, padx=10, pady=10)
 
 completion_tracker_btn = tk.Button(button_frame, text="Completion Tracker", command=completion_tracker)
 completion_tracker_btn.pack(side="right", padx=10, pady=5)
