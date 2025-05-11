@@ -41,6 +41,8 @@ def addtask(event = None):
         else:     
             task_tree.insert("", "end", values=("☐", date, task, priority), tags=(priority))
             task_entry.delete(0, tk.END)
+        
+        tdl_task()
 
 def deletetask():
         whichtask = task_tree.selection()
@@ -48,6 +50,8 @@ def deletetask():
             task_tree.delete(whichtask)
         else:
              messagebox.showerror("error","no task selected")
+
+        tdl_task()
 
 completed_task = []
 
@@ -60,6 +64,9 @@ def togglecheckbox(event):
                 status[0] = "☑"
                 completed_task.append(status)
                 task_tree.delete(task)
+    
+    tdl_task()
+    tracker_task()
 
 completed_tasktree = None
 
@@ -77,6 +84,9 @@ def undo_completedtask(event):
                     if task[1:] == status[1:]:  
                         completed_task.remove(task)
                         break
+    
+    tdl_task()
+    tracker_task()
 
 button_frame = tk.Frame(root)
 button_frame.pack(pady=10, fill="x")
@@ -142,4 +152,40 @@ def completion_tracker():
 completion_tracker_btn = tk.Button(button_frame, text="Completion Tracker", command=completion_tracker)
 completion_tracker_btn.pack(side="right", padx=10, pady=5)
 
+
+def tdl_task():
+    with open ("tdltask.txt", "w", encoding="utf-8") as file:
+        for task in task_tree.get_children():
+            values = task_tree.item(task)["values"]
+            content = f"{values[0]} | {values[1]} | {values[2]} | {values[3]}\n"
+            file.write(content)
+
+def tracker_task():
+    with open ("trackertask.txt", "w", encoding="utf-8") as file:
+        for task in completed_task:
+            content = f"{task[0]} | {task[1]} | {task[2]} | {task[3]}\n"
+            file.write(content)
+
+
+def load_txt():
+    try:
+        with open ("tdltask.txt", "r", encoding="utf-8") as file:
+            for content in file:
+                parts = content.strip().split(" | ")
+                if len(parts) == 4:
+                    task_tree.insert("", "end", values=parts, tags=(parts[3]))
+    except FileNotFoundError:
+        pass
+
+    try:
+        with open("trackertask.txt", "r", encoding="utf-8") as file:
+            for content in file:
+                parts = content.strip().split(" | ")
+                if len(parts) == 4:
+                    completed_task.append(parts)
+    except FileNotFoundError:
+        pass
+
+
+load_txt()
 root.mainloop()
