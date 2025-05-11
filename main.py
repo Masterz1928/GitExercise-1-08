@@ -70,8 +70,13 @@ def undo_completedtask(event):
             status = list(completed_tasktree.item(task, "values"))
             if status[0] == "☑":
                 status[0] = "☐"
-                task_tree.insert("", "end", values=status)
+                task_tree.insert("", "end", values=status, tags=status[3])
                 completed_tasktree.delete(task)
+
+                for task in completed_task:
+                    if task[1:] == status[1:]:  
+                        completed_task.remove(task)
+                        break
 
 button_frame = tk.Frame(root)
 button_frame.pack(pady=10, fill="x")
