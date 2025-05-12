@@ -1,0 +1,8 @@
+token.json
+credentials.json
+*.pem
+*.key
+*.crt
+*.env
+__pycache__/
+*.pyc

@@ -4,6 +4,16 @@ from tkinter import ttk,messagebox,colorchooser
 import os
 from datetime import date,datetime
 import zipfile
+import os.path
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaFileUpload
+from tkinter import ttk, messagebox
+import tkinter as tk
+import threading 
 
 def show_frame(frame):
     frame.tkraise()
@@ -402,6 +412,157 @@ clear_search_button.place(relx=0.9, rely=0.5, anchor="center")  # Position it ne
 
 update_file_list()
 
+
+SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.file"]
+
+def authenticate_google_account():
+    creds = None
+    if os.path.exists("token.json"):
+        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+            creds = flow.run_local_server(port=0)
+        with open("token.json", "w") as token:
+            token.write(creds.to_json())
+    service = build("drive", "v3", credentials=creds)
+    return service
+
+def list_files(service):
+    try:
+        results = service.files().list(pageSize=10, fields="nextPageToken, files(id, name)").execute()
+        items = results.get("files", [])
+        if not items:
+            print("No files found.")
+            return
+        print("Files:")
+        for item in items:
+            print(f"{item['name']} ({item['id']})")
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+
+import mimetypes
+
+def upload_file_to_drive(service, filename, filepath, folder_id=None):
+    try:
+        # Dynamically guess the MIME type based on the file extension
+        mime_type, _ = mimetypes.guess_type(filename)
+        # If the MIME type cannot be guessed, default to 'application/octet-stream'
+        if mime_type is None:
+            mime_type = 'application/octet-stream'
+        # File metadata: including 'parents' to specify the upload folder
+        file_metadata = {'name': filename}
+        if folder_id:
+            file_metadata['parents'] = [folder_id]  # Add the folder ID if a folder is provided
+        # Media to upload the file
+        media = MediaFileUpload(filepath, mimetype=mime_type)
+        # Upload the file to Google Drive
+        file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        
+        print(f"Uploaded '{filename}' with file ID: {file.get('id')}")
+        messagebox.showinfo("Uploaded", f"Uploaded '{filename}'")
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+
+
+
+
+
+def create_or_get_folder(service, folder_name="MMU Study Buddy Files"):
+    # Search for the folder by name
+    results = service.files().list(
+        q=f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'", 
+        fields="files(id, name)"
+    ).execute()
+    items = results.get("files", [])
+    
+    if items:
+        # Folder exists, return its ID
+        folder_id = items[0]['id']
+        print(f"Folder '{folder_name}' found with ID: {folder_id}")
+    else:
+        # Folder doesn't exist, create it
+        file_metadata = {
+            'name': folder_name,
+            'mimeType': 'application/vnd.google-apps.folder'
+        }
+        folder = service.files().create(body=file_metadata, fields='id').execute()
+        folder_id = folder.get('id')
+        print(f"Folder '{folder_name}' created with ID: {folder_id}")
+    
+    return folder_id
+
+
+
+def main_api():
+    def show_files():
+        folder_path = r"C:\Notes"
+        try:
+            files = os.listdir(folder_path)
+            files = [file for file in files if os.path.isfile(os.path.join(folder_path, file))]
+            file_listbox.delete(0, tk.END)
+            for file in files:
+                file_listbox.insert(tk.END, file)
+        except FileNotFoundError:
+            print("The folder path doesn't exist.")
+
+    Upload_Option = tk.Toplevel(root)
+    Upload_Option.geometry("250x250")
+    Upload_Option.title("File Listbox")
+
+    show_files()
+
+
+    def User_Selection_Of_Upload_File():
+        selection = file_listbox.curselection()
+        if selection:
+            index = selection[0]
+            filename = file_listbox.get(index)
+            filepath = os.path.join(r"C:\Notes", filename)
+            
+            # Authenticate user
+            service = authenticate_google_account()
+            
+            # Create or get folder
+            folder_id = create_or_get_folder(service)
+            
+            # Upload file to the folder
+            threading.Thread(target=upload_file_to_drive, args=(service, filename, filepath, folder_id)).start()
+        else:
+            print("No file selected for upload.")
+
+
+
+    ReloadButton = ttk.Button(Upload_Option, text="Reload Files", command=show_files)
+    ReloadButton.pack(pady=10)
+
+    UploadButton = ttk.Button(Upload_Option, text="Upload File", command=User_Selection_Of_Upload_File)
+    UploadButton.pack(pady=10)
+
+    def logout():
+        print("Logging out...")
+        if os.path.exists("token.json"):
+            os.remove("token.json")  # Delete the token file after logout
+        messagebox.showinfo("Logged Out", "You have been logged out successfully.")
+
+    def on_closing():
+        if messagebox.askyesno("Sign In", "Do you want to sign in again?"):
+            root.destroy()  # Just close the window, keep the session (no logout)
+            main_api()  # Relaunch the program (user will remain signed in)
+        else:
+            logout()  # User doesn't want to continue — sign them out
+            messagebox.showinfo("Goodbye", "You have been signed out. You will need to sign in again next time.")
+            root.destroy()
+
+    service = authenticate_google_account()
+
+    LogOutButton = ttk.Button(Upload_Option, text="Log Out", command=on_closing)
+    LogOutButton.pack(pady=10)
+
+
+
 #three button for the new, open, delete function
 button_frame = tk.Frame(home_frame, bg="white")
 button_frame.pack(pady=15)
@@ -418,6 +579,8 @@ btn_delete.pack(side="left", padx=20)
 btn_export = tk.Button(button_frame, text="Export All Notes", font=25, relief="flat", width=20, height=3, command=export_notes_with_format)
 btn_export.pack(side="left", padx=20)# Adjust as needed
 
+btn_upload = tk.Button(button_frame, text="Upload to Google Drive", font=25, relief="flat", width=20, height=3, command=main_api)
+btn_upload.pack(side="left", padx=20)# Adjust as needed
 
 
 pinnednote_lbl= tk.Label(home_frame, text="Pinned Note",bg="white",font=('Arial',25))
