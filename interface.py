@@ -20,6 +20,18 @@ def update_file_list():
     for file in files:
         file_listbox.insert(tk.END, file)
 
+def deleting_notes():
+    selected_files = file_listbox.curselection() #Get the file that the user selected 
+    if not selected_files: # IF no files are selected, then do this  
+        messagebox.showwarning("No selection", "Select a file to delete.") #Prompt the User
+        return #Basically telling python to stop runninng this part and go out of this block of code 
+    file_delete_name = file_listbox.get(selected_files[0]) # Since the selected_files variable contains a tuple, we take the first value e.g. (1,) 
+    confirm = messagebox.askyesno("Delete?", f"Are you sure you want to delete '{file_delete_name}'?")
+    if confirm:
+        os.remove(os.path.join(folder_path, file_delete_name)) # Removes the file 
+        update_file_list() #Updates the Listbox 
+
+
 #function for listbox
 def show_listbox_menu(event):
     try:
@@ -395,16 +407,16 @@ button_frame = tk.Frame(home_frame, bg="white")
 button_frame.pack(pady=15)
 
 btn_new = tk.Button(button_frame, text="New", font=25, relief="flat", width=20, height=3)
-btn_new.pack(side="left", padx=10)
+btn_new.pack(side="left", padx=20)
 
 btn_open = tk.Button(button_frame, text="Open", font=25, relief="flat", width=20, height=3)
-btn_open.pack(side="left", padx=10)
+btn_open.pack(side="left", padx=20)
 
-btn_delete = tk.Button(button_frame, text="Delete", font=25, relief="flat", width=20, height=3)
-btn_delete.pack(side="left", padx=10)
+btn_delete = tk.Button(button_frame, text="Delete", font=25, relief="flat", width=20, height=3,command=deleting_notes)
+btn_delete.pack(side="left", padx=20)
 
 btn_export = tk.Button(button_frame, text="Export All Notes", font=25, relief="flat", width=20, height=3, command=export_notes_with_format)
-btn_export.pack(side="left", padx=10)# Adjust as needed
+btn_export.pack(side="left", padx=20)# Adjust as needed
 
 
 
