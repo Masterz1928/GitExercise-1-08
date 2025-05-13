@@ -408,57 +408,97 @@ tree_menu.add_command(label="Unpin", command=lambda: unpin_from_tree())
 file_listbox.bind("<Button-3>", show_listbox_menu)# the right click function and bind with the show_list_menu function
 search_entry.bind("<KeyRelease>", search_notes)
 clear_search_button = tk.Button(top_frame, text="Clear", command=clear_search)
-clear_search_button.place(relx=0.9, rely=0.5, anchor="center")  # Position it next to the search bar
+clear_search_button.place(relx=0.9, rely=0.5, anchor="center")  # Position it next to the search bar`
 
 update_file_list()
 
+##########################################################################
+import mimetypes
+import webbrowser
 
+# Defines permission 
+# metadata - view file names adn metadata 
+#drive.file uploading files 
 SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.file"]
 
+# variable to store instance of authentication 
+service = None
+
+#Creating a function for authentication 
 def authenticate_google_account():
+    # Use global var 
+    global service  
     creds = None
+    # if token.json exsits, use that instead of loggin in (No need to relog in) 
     if os.path.exists("token.json"):
         creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    
     if not creds or not creds.valid:
+        # If credentials are invalid or expired but we have a fresh token, refresh them.
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+            BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Get script's folder
+            # path to credential.json
+            CREDENTIALS_PATH = os.path.join(BASE_DIR, "credentials.json")
+            # Sets up the log in flow and request permission for necessary permissions
+            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
+            # Opens a browser  window (port=0 means any free port)
+            # save and successful login as creds 
             creds = flow.run_local_server(port=0)
+        
+        # Save the credentials to token.json 
         with open("token.json", "w") as token:
+            # save as json file 
             token.write(creds.to_json())
+    
+    # connect the progrram to the google drive API 
     service = build("drive", "v3", credentials=creds)
-    return service
 
+
+
+# Creating a function to get files
 def list_files(service):
     try:
+        # get up to 10 files 
+        # if there are more than to the nextpageToken will bring out the other set 
+        # files(id, name) - gives us name and id of each file
         results = service.files().list(pageSize=10, fields="nextPageToken, files(id, name)").execute()
+
+        # if there are files, get that, otherwise, just return back an empty list 
         items = results.get("files", [])
+        # if no items are found 
         if not items:
             print("No files found.")
             return
         print("Files:")
+        # go thorugh each file in the list and display the name + id 
         for item in items:
             print(f"{item['name']} ({item['id']})")
+
+    # something does wrong show the error 
     except HttpError as error:
         print(f"An error occurred: {error}")
 
-import mimetypes
-
+# Creating a function to upload files to Google Drive 
 def upload_file_to_drive(service, filename, filepath, folder_id=None):
     try:
-        # Dynamically guess the MIME type based on the file extension
         mime_type, _ = mimetypes.guess_type(filename)
-        # If the MIME type cannot be guessed, default to 'application/octet-stream'
         if mime_type is None:
+            # if cant guess file type then we set it to a binary file 
             mime_type = 'application/octet-stream'
-        # File metadata: including 'parents' to specify the upload folder
+
+        # what to name the file in drive 
         file_metadata = {'name': filename}
+
         if folder_id:
-            file_metadata['parents'] = [folder_id]  # Add the folder ID if a folder is provided
-        # Media to upload the file
+            # parent is to spesify which folder on the drive 
+            file_metadata['parents'] = [folder_id]
+        
+        # handling file upload + path + what kind of file its receiving 
         media = MediaFileUpload(filepath, mimetype=mime_type)
-        # Upload the file to Google Drive
+        # actual uploading.  using service to interact with API 
+        # sends the file's meta data (names/parent folder) and get bacc the id 
         file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
         
         print(f"Uploaded '{filename}' with file ID: {file.get('id')}")
@@ -466,72 +506,120 @@ def upload_file_to_drive(service, filename, filepath, folder_id=None):
     except HttpError as error:
         print(f"An error occurred: {error}")
 
-
-
-
-
+#Creating a function to create folder  
 def create_or_get_folder(service, folder_name="MMU Study Buddy Files"):
-    # Search for the folder by name
+    # search for the folder with the name "MMU Study Buddy Files"
     results = service.files().list(
+    # Using mimeType='application/vnd.google-apps.folder to only search for folders 
+    # feild tells the API to return the name and the ID 
         q=f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'", 
         fields="files(id, name)"
     ).execute()
+    # get the files, if no files then retunr empty list 
     items = results.get("files", [])
     
     if items:
-        # Folder exists, return its ID
+        # Get the ID from the folder from the first result
+        # the [0] is only for first folder (since we only have 1 folder ) 
+
         folder_id = items[0]['id']
         print(f"Folder '{folder_name}' found with ID: {folder_id}")
+    # If dun have the folder 
     else:
-        # Folder doesn't exist, create it
-        file_metadata = {
-            'name': folder_name,
-            'mimeType': 'application/vnd.google-apps.folder'
-        }
+        #Create the folder with the folder name adn MIME type 
+        file_metadata = {'name': folder_name, 'mimeType': 'application/vnd.google-apps.folder'}
         folder = service.files().create(body=file_metadata, fields='id').execute()
+        # get ID and print 
         folder_id = folder.get('id')
         print(f"Folder '{folder_name}' created with ID: {folder_id}")
-    
+    # to allow other func to use the folder_id var 
     return folder_id
 
-
-
+# Creaing the main part of the code that the user interacts with and bind to button 
 def main_api():
+    # show all files in the folder dir 
     def show_files():
         folder_path = r"C:\Notes"
         try:
+            # list the files out
             files = os.listdir(folder_path)
+            # filters out the files form the dictionary 
             files = [file for file in files if os.path.isfile(os.path.join(folder_path, file))]
+            # clear list box 
             file_listbox.delete(0, tk.END)
+            # insert all of the filesinto the listbox 
             for file in files:
                 file_listbox.insert(tk.END, file)
         except FileNotFoundError:
             print("The folder path doesn't exist.")
 
     Upload_Option = tk.Toplevel(root)
-    Upload_Option.geometry("250x250")
+    Upload_Option.geometry("350x550")
     Upload_Option.title("File Listbox")
-
+    
     show_files()
-
-
+    # Creating a function to upload user's selection of folders 
     def User_Selection_Of_Upload_File():
+        # if the user didnt sign in
+        if service is None:
+            messagebox.showerror("Error", "You're not signed in. Please sign in first.")
+            return
+        # get user selection 
         selection = file_listbox.curselection()
         if selection:
+            # take first selection 
             index = selection[0]
+            # gets the selected file name 
             filename = file_listbox.get(index)
+            # gets the file path 
             filepath = os.path.join(r"C:\Notes", filename)
             
-            # Authenticate user
-            service = authenticate_google_account()
-            
-            # Create or get folder
+            # then upload the file by calling the create or get folder func 
             folder_id = create_or_get_folder(service)
-            
-            # Upload file to the folder
+            # to avoid lag or inresponsive behavoir 
             threading.Thread(target=upload_file_to_drive, args=(service, filename, filepath, folder_id)).start()
         else:
             print("No file selected for upload.")
+    # create a function to list out the file that have been uuploaded 
+    def list_files_from_drive(service):
+        try:
+            # either create of finds the MMu study buddy folder 
+            folder_id = create_or_get_folder(service)
+            # find the files in the MMu study buddy folder 
+            query = f"'{folder_id}' in parents and trashed = false"
+            # gets the file that match, and gets the file name by searching in the main drive space 
+            results = service.files().list(
+                q=query,
+                fields="files(name)",
+                spaces="drive"
+            ).execute()
+            # gets the files or return empty list if dont have 
+            files = results.get('files', [])
+            return [f["name"] for f in files]
+        except HttpError as error:
+            print(f"An error occurred: {error}")
+            return []
+        
+
+    def open_drive_files_window():
+        if service is None:
+            messagebox.showerror("Error", "You're not signed in.")
+            return
+
+        files = list_files_from_drive(service)
+        
+        if not files:
+            messagebox.showinfo("No Files", "No files found in your Drive folder.")
+            return
+
+        listboxuploadedfiles = tk.Listbox(Upload_Option, width=40)
+        listboxuploadedfiles.pack(padx=10, pady=10, ipadx=25, ipady=75)
+
+        for file in files:
+            listboxuploadedfiles.insert(tk.END, file)
+
+    def open_drive():
+        webbrowser.open("https://drive.google.com/drive/my-drive")
 
 
 
@@ -541,26 +629,45 @@ def main_api():
     UploadButton = ttk.Button(Upload_Option, text="Upload File", command=User_Selection_Of_Upload_File)
     UploadButton.pack(pady=10)
 
+    Todrivebutton = ttk.Button(Upload_Option, text="Go to Google Drive", command=open_drive)
+    Todrivebutton.pack(pady=10)
+
+
     def logout():
+        global service
         print("Logging out...")
+        service = None
         if os.path.exists("token.json"):
-            os.remove("token.json")  # Delete the token file after logout
+            os.remove("token.json")
         messagebox.showinfo("Logged Out", "You have been logged out successfully.")
 
     def on_closing():
-        if messagebox.askyesno("Sign In", "Do you want to sign in again?"):
-            root.destroy()  # Just close the window, keep the session (no logout)
-            main_api()  # Relaunch the program (user will remain signed in)
-        else:
-            logout()  # User doesn't want to continue — sign them out
+        if messagebox.askyesno("Sign Out", "Are you sure you want to sign out?"):
+            logout()
+            UploadButton.config(state="disabled")
+            LogOutButton.config(state="disabled")
+            ShowUploadedFilesButton.config(state="disabled")
             messagebox.showinfo("Goodbye", "You have been signed out. You will need to sign in again next time.")
-            root.destroy()
-
-    service = authenticate_google_account()
-
+            Upload_Option.destroy()
+        else:
+            Upload_Option.destroy()
+            main_api()  # Relaunch the program (user will remain signed in)
+    
     LogOutButton = ttk.Button(Upload_Option, text="Log Out", command=on_closing)
     LogOutButton.pack(pady=10)
 
+    ShowUploadedFilesButton = ttk.Button(Upload_Option, text="Show All Uploaded Files", command=open_drive_files_window)
+    ShowUploadedFilesButton.pack(pady=10)
+
+
+    global service  # Ensure service is declared once globally
+    service = authenticate_google_account()  # Authenticate once at the start
+    UploadButton.config(state="normal")
+    LogOutButton.config(state="normal")
+    ShowUploadedFilesButton.config(state="normal")
+
+
+#################################################################################################################################################
 
 
 #three button for the new, open, delete function
