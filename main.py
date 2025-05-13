@@ -51,7 +51,7 @@ frame.pack(pady=20)
 # Load resized icons (manually resized images)
 play_icon = tk.PhotoImage(file=r"C:\Users\Harsimran\Projects\Mini_IT_Project-1-08\ButtonPics\play.png")  # Replace with your resized file path
 pause_icon = tk.PhotoImage(file=r"C:\Users\Harsimran\Projects\Mini_IT_Project-1-08\ButtonPics\pause.png")  # Replace with your resized file path
-stop_icon = tk.PhotoImage(file=r"C:\Users\Harsimran\Projects\Mini_IT_Project-1-08\ButtonPics\.png")  # Replace with your resized file path
+stop_icon = tk.PhotoImage(file=r"C:\Users\Harsimran\Projects\Mini_IT_Project-1-08\ButtonPics\stop.png")  # Replace with your resized file path
 
 # Create buttons with resized images
 load_button = tk.Button(frame, text="Load Music", command=load_music)
