@@ -13,12 +13,14 @@ root.geometry("800x800")
 input_frame = tk.Frame(root)
 input_frame.pack(pady=10, fill="x") 
 
+#task entry
 task_label = tk.Label(input_frame, text="Task")
 task_label.grid(row=0, column=0, padx=5, pady=5, sticky="w")
 
 task_entry = tk.Entry(input_frame, width=40)
 task_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")  
 
+#priority
 priority_label = tk.Label(input_frame, text="Priority")
 priority_label.grid(row=0, column=2, padx=5, pady=5, sticky="w")
 
@@ -32,44 +34,48 @@ tk.Radiobutton(priority_frame, text="High", variable=priority_var, value="High")
 tk.Radiobutton(priority_frame, text="Medium", variable=priority_var, value="Medium").pack(side="left")
 tk.Radiobutton(priority_frame, text="Low", variable=priority_var, value="Low").pack(side="left")
 
+#add task function
 def addtask(event = None):
-        date = time.strftime("%Y-%m-%d")
-        task = task_entry.get()
-        priority = priority_var.get()
-        if task == "" : 
-            messagebox.showerror("task","no task")
-        else:     
-            task_tree.insert("", "end", values=("☐", date, task, priority), tags=(priority))
-            task_entry.delete(0, tk.END)
+        date = time.strftime("%Y-%m-%d")                                                        #get date
+        task = task_entry.get()                                                                 #get task
+        priority = priority_var.get()                                                           #get priority
+        if task == "" :                                                                         #show no task or not
+            messagebox.showerror("task","no task")                                              
+        else:                                                                                   
+            task_tree.insert("", "end", values=("☐", date, task, priority), tags=(priority))   #add task to list 
+            task_entry.delete(0, tk.END)                                                       #delete entry after task added  
         
-        tdl_task()
+        tdl_task()                                                                             #save to txt file
 
+#delete task function
 def deletetask():
-        whichtask = task_tree.selection()
-        if whichtask:
-            task_tree.delete(whichtask)
+        whichtask = task_tree.selection()                                                       #see which task selecred
+        if whichtask:                           
+            task_tree.delete(whichtask)                                                         #delete selected task
         else:
-             messagebox.showerror("error","no task selected")
+             messagebox.showerror("Error","No task selected")                                   #if didnt select task
 
-        tdl_task()
+        tdl_task()                                                                              #update the txt file
 
-completed_task = []
+completed_task = []                                                                             #list to hold completed tasks
 
+#toggle function
 def togglecheckbox(event):
-    selected = task_tree.selection()
+    selected = task_tree.selection()                                                            #get task              
     if selected:
         for task in selected:
-            status = list(task_tree.item(task, "values"))
+            status = list(task_tree.item(task, "values"))                                       #get task data in list 
             if status[0] == "☐":
                 status[0] = "☑"
-                completed_task.append(status)
-                task_tree.delete(task)
+                completed_task.append(status)                                                   #add to completed list
+                task_tree.delete(task)                                                          #delete from the task tree list
     
     tdl_task()
     tracker_task()
 
-completed_tasktree = None
+completed_tasktree = None                                                                       #global the treeview
 
+#untoggle function
 def undo_completedtask(event):
     selected = completed_tasktree.selection()
     if selected:
@@ -77,13 +83,13 @@ def undo_completedtask(event):
             status = list(completed_tasktree.item(task, "values"))
             if status[0] == "☑":
                 status[0] = "☐"
-                task_tree.insert("", "end", values=status, tags=status[3])
-                completed_tasktree.delete(task)
+                task_tree.insert("", "end", values=status, tags=status[3])                      #reinsert the task to list with correct values
+                completed_tasktree.delete(task)                                                 #delete the task from tracker
 
                 for task in completed_task:
-                    if task[1:] == status[1:]:  
-                        completed_task.remove(task)
-                        break
+                    if task[1:] == status[1:]:                                                  #compare the task values
+                        completed_task.remove(task)                                             #if match then remove it
+                        break   
     
     tdl_task()
     tracker_task()
@@ -154,10 +160,10 @@ completion_tracker_btn.pack(side="right", padx=10, pady=5)
 
 
 def tdl_task():
-    with open ("tdltask.txt", "w", encoding="utf-8") as file:
+    with open ("tdltask.txt", "w", encoding="utf-8") as file:                               
         for task in task_tree.get_children():
-            values = task_tree.item(task)["values"]
-            content = f"{values[0]} | {values[1]} | {values[2]} | {values[3]}\n"
+            values = task_tree.item(task)["values"]                                                 #get task values
+            content = f"{values[0]} | {values[1]} | {values[2]} | {values[3]}\n"                    #split em in |
             file.write(content)
 
 def tracker_task():
@@ -171,9 +177,9 @@ def load_txt():
     try:
         with open ("tdltask.txt", "r", encoding="utf-8") as file:
             for content in file:
-                parts = content.strip().split(" | ")
-                if len(parts) == 4:
-                    task_tree.insert("", "end", values=parts, tags=(parts[3]))
+                parts = content.strip().split(" | ")                                                #split content into parts
+                if len(parts) == 4:                                                                 #check wheter have 4 parts
+                    task_tree.insert("", "end", values=parts, tags=(parts[3]))                      #true then insert all of the values
     except FileNotFoundError:
         pass
 
