@@ -1,7 +1,10 @@
 import tkinter as tk
 import time 
-from tkinter import StringVar, messagebox
+from tkinter import StringVar, messagebox, filedialog
 import winsound
+import pygame
+import os
+
 #git add .
 #git commit -m "name"
 #git push
@@ -9,6 +12,8 @@ import winsound
 root = tk.Tk()
 root.title("Timer")
 root.geometry("800x800")
+
+pygame.mixer.init()
 
 #display clock
 def clock():
@@ -117,7 +122,16 @@ def timer():
             remaining_time[0] = timeleft
         else:
             ntimer_label.config(text="DONE!", fg="green")
-            winsound.Beep(1000, 500) 
+
+            if os.path.exists(sound_path.get()):
+                try:
+                    pygame.mixer.music.load(sound_path.get())
+                    pygame.mixer.music.play()
+
+                except Exception as e:
+                    print("Error playing sound:", e)
+            else:
+                print("No sound file selected or path invalid.")
             messagebox.showinfo("ALERT", f"TIMES UP for '{purpose_text}'")
 
     def pause():
@@ -174,6 +188,20 @@ def open_history_window():
 
 history_button = tk.Button(root, text="History", command=open_history_window)
 history_button.place(relx=0.0, rely=1.0, x=10, y=-10, anchor="sw")
+
+sound_path = StringVar(value="") 
+
+def choose_sound():
+    file = filedialog.askopenfilename(
+        title="Select Alarm Sound",
+        filetypes=[("Audio Files", "*.wav *.mp3 *.ogg")]
+    )
+    if file:
+        sound_path.set(file)
+
+select_button = tk.Button(root, text="🎵 Choose Alarm Sound", command=choose_sound)
+select_button.place(relx=1.0, rely=1.0, x=-10, y=-10, anchor="se")
+
 
 clock()
 root.mainloop()
