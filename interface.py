@@ -10,8 +10,13 @@ def show_frame(frame):
 #show the search bar only appear when it changes to the note_frame
     if frame == home_frame:
         search_entry.place(relx=0.5, rely=0.5, anchor="center")
+        btn_trash.place(relx=0.75,rely=0.5,anchor="center")
+        clear_search_button.place(relx=0.7, rely=0.5, anchor="center")
+
     else:
         search_entry.place_forget()
+        btn_trash.place_forget()
+        clear_search_button.place_forget()
 
 
 def update_file_list():
@@ -464,9 +469,8 @@ tree_menu.add_command(label="Unpin", command=lambda: unpin_from_tree())
 file_listbox.bind("<Button-3>", show_listbox_menu)# the right click function and bind with the show_list_menu function
 search_entry.bind("<KeyRelease>", search_notes)
 clear_search_button = tk.Button(top_frame, text="Clear", command=clear_search)
-clear_search_button.place(relx=0.7, rely=0.5, anchor="center")  # Position it next to the search bar
 btn_trash = tk.Button(top_frame, text="Trash Bin", command=open_trash_bin)
-btn_trash.place(relx=0.75, rely=0.5, anchor="center")
+
 
 update_file_list()
 
