@@ -1040,7 +1040,6 @@ load_pinned_notes()
 timer_lbl= tk.Label(timer_frame, text="Timer Section", font=("Arial", 30), bg="white")
 timer_lbl.place(x=0,y=0)
 
-#display clock
 def clock():
     hour = time.strftime("%H")
     minute = time.strftime("%M")
@@ -1206,6 +1205,7 @@ history_button = tk.Button(timer_frame, text="History", command=open_history_win
 history_button.place(relx=0.0, rely=1.0, x=10, y=-10, anchor="sw")
 
 clock()
+
 
 #calendar section
 calendar_lbl= tk.Label(calendar_frame,text="Calendar",bg="white",font=('Arial',30))
@@ -1424,4 +1424,5 @@ load_txt()
 show_frame(home_frame)
 
 root.mainloop()
+
 
