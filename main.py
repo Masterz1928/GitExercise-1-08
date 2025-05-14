@@ -111,12 +111,12 @@ task_tree = ttk.Treeview(listbox_frame, columns=section, show="headings")
 
 task_tree.heading("status", text="Status")
 task_tree.column("status", width=50, stretch=tk.NO) 
-task_tree.heading("Date", text="Date")
+task_tree.heading("Date", text="Date", command=lambda: sorting(task_tree, "Date", sort_states.get("Date", False)))
 task_tree.column("Date", width=100, stretch=tk.NO)  
-task_tree.heading("Task", text="Task")
+task_tree.heading("Task", text="Task", command=lambda: sorting(task_tree, "Task", sort_states.get("Task", False)))
 task_tree.column("Task", width=300, stretch=tk.YES)  
-task_tree.heading("Priority", text="Priority")
-task_tree.column("Priority", width=100, stretch=tk.NO)
+task_tree.heading("Priority", text="Priority", command=lambda: sorting(task_tree, "Priority", sort_states.get("Priority", False)))
+task_tree.column("Priority", width=150, stretch=tk.NO)  
 
 task_tree.pack(fill="both", expand=True)
 task_tree.bind("<Double-1>", togglecheckbox)
@@ -192,6 +192,31 @@ def load_txt():
     except FileNotFoundError:
         pass
 
+sort_states = {}                                                                                    #dict to store sort state
+
+def sorting(tree, col, descending):
+    global sort_states
+    data = [(tree.set(item, col), item) for item in tree.get_children()]                            #get value and item id list
+
+    if col == "Date":
+        data.sort(key=lambda t: datetime.strptime(t[0], "%Y-%m-%d"), reverse=descending)            #convert date string and see wheter ascending or descending
+
+    elif col == "Priority":
+        priority_order = {"High": 0, "Medium": 1, "Low": 2}
+        data.sort(key=lambda t: priority_order.get(t[0].capitalize(), 99), reverse=descending)      #get priority and make sure everything in correct form
+
+    else:
+        data.sort(key=lambda t: t[0].lower(), reverse=descending)
+
+    for index, (val, item) in enumerate(data):                                                      #check all index and give all data a index
+        tree.move(item, '', index)                                                                  #move it
+
+    for colname in tree["columns"]:
+        arrow = ""
+        if colname == col:
+            arrow = " ↓" if descending else " ↑"
+        sort_states[col] = not descending                                              
+        tree.heading(colname, text=colname + arrow, command=lambda c=colname: sorting(tree, c, sort_states.get(c, False))) #update the heading
 
 load_txt()
 root.mainloop()
