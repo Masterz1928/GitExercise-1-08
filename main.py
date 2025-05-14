@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import StringVar, messagebox, ttk
 import time
-##from datetime import datetime
+from datetime import datetime
 #git add .
 #git commit -m "name"
 #git push
@@ -105,9 +105,16 @@ deltask_btn.pack(side="left", padx=10, pady=5)
 
 listbox_frame = tk.Frame(root)
 listbox_frame.pack(fill="both", expand=True, padx=10, pady=10)
+listbox_frame.grid_rowconfigure(0, weight=1)
+listbox_frame.grid_columnconfigure(0, weight=1)
 
 section = ("status", "Date", "Task", "Priority")
 task_tree = ttk.Treeview(listbox_frame, columns=section, show="headings")
+
+scrollbar = ttk.Scrollbar(listbox_frame, orient="vertical", command=task_tree.yview)
+task_tree.configure(yscrollcommand=scrollbar.set)
+task_tree.grid(row=0, column=0, sticky="nsew")
+scrollbar.grid(row=0, column=1, sticky="ns")
 
 task_tree.heading("status", text="Status")
 task_tree.column("status", width=50, stretch=tk.NO) 
@@ -118,7 +125,6 @@ task_tree.column("Task", width=300, stretch=tk.YES)
 task_tree.heading("Priority", text="Priority", command=lambda: sorting(task_tree, "Priority", sort_states.get("Priority", False)))
 task_tree.column("Priority", width=150, stretch=tk.NO)  
 
-task_tree.pack(fill="both", expand=True)
 task_tree.bind("<Double-1>", togglecheckbox)
 
 task_tree.tag_configure("High", background="#ff9999")   
@@ -132,6 +138,10 @@ def completion_tracker():
     completiontracker = tk.Toplevel(root)  
     completiontracker.title("Completion Tracker")
     completiontracker.geometry("500x500")
+    frame = tk.Frame(completiontracker)
+    frame.pack(fill="both", expand=True, padx=10, pady=10)
+    frame.grid_rowconfigure(0, weight=1)
+    frame.grid_columnconfigure(0, weight=1)
     
     if not completed_task:
         label = tk.Label(completiontracker, text="No completed tasks yet.")
@@ -139,7 +149,7 @@ def completion_tracker():
         return
     
     else:
-        completed_tasktree = ttk.Treeview(completiontracker, columns=section, show="headings")
+        completed_tasktree = ttk.Treeview(frame, columns=section, show="headings")
         completed_tasktree.heading("status", text="Status")
         completed_tasktree.column("status", width=50, stretch=tk.NO) 
         completed_tasktree.heading("Date", text="Date")
@@ -149,10 +159,14 @@ def completion_tracker():
         completed_tasktree.heading("Priority", text="Priority")
         completed_tasktree.column("Priority", width=80, stretch=tk.NO)
 
+        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=completed_tasktree.yview)
+        completed_tasktree.configure(yscrollcommand=scrollbar.set)
+        completed_tasktree.grid(row=0, column=0, sticky="nsew")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
         for task in completed_task:
             completed_tasktree.insert("", "end", values=task)
 
-        completed_tasktree.pack(fill="both", expand=True, padx=10, pady=10)
         completed_tasktree.bind("<Double-1>", undo_completedtask)
 
 completion_tracker_btn = tk.Button(button_frame, text="Completion Tracker", command=completion_tracker)
