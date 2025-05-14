@@ -8,6 +8,9 @@ import markdown
 import re
 from bs4 import BeautifulSoup
 import os
+import time
+import winsound
+from tkinter import StringVar
 
 def run_notepad(file_content=""):
     global Text_Box
@@ -1037,6 +1040,173 @@ load_pinned_notes()
 timer_lbl= tk.Label(timer_frame, text="Timer Section", font=("Arial", 30), bg="white")
 timer_lbl.place(x=0,y=0)
 
+def clock():
+    hour = time.strftime("%H")
+    minute = time.strftime("%M")
+    second = time.strftime("%S")
+    day = time.strftime("%a")
+    date = time.strftime("%d")
+
+    label_time.config(text=hour + ":" + minute + ":" + second)
+    label_day_date.config(text=day + "," + date)
+    label_time.after(1000, clock)
+
+label_time = tk.Label(timer_frame, text="time", font=("Arial", 20))
+label_time.place(relx=1.0, x=-10, y=10, anchor="ne")
+label_day_date = tk.Label(timer_frame, text="", font=("Arial", 12))
+label_day_date.place(relx=1.0, x=-10, y=40, anchor="ne")
+
+#connect betwen python and tkinter
+hours = StringVar(value="00")
+mins = StringVar(value="00")
+secs = StringVar(value="00")
+
+purpose = StringVar(timer_frame, "")
+
+main_label = tk.Label(timer_frame, text="Set the time")
+main_label.pack()
+
+timeinput_frame =tk.LabelFrame(timer_frame)
+timeinput_frame.pack(pady=10)
+
+#input
+hoursentry = tk.Entry(timeinput_frame, width=2, textvariable=hours, font=("arial", 18))
+hoursentry.pack(side =tk.LEFT)
+separatorlabel = tk.Label(timeinput_frame, text=":")
+separatorlabel.pack(side =tk.LEFT)
+minsentry = tk.Entry(timeinput_frame, width=2, textvariable=mins, font=("arial", 18))
+minsentry.pack(side =tk.LEFT)
+separatorlabel2= tk.Label(timeinput_frame, text=":")
+separatorlabel2.pack(side =tk.LEFT)
+secsentry = tk.Entry(timeinput_frame, width=2, textvariable=secs, font=("arial", 18))
+secsentry.pack(side =tk.LEFT)
+
+purpose_label = tk.Label(timer_frame, text="Purpose")
+purpose_label.pack()
+purpose_entry= tk.Entry(timer_frame, textvariable=purpose, font=("arial", 14))
+purpose_entry.pack()
+
+timers_frame = tk.Frame(timer_frame)
+timers_frame.pack(pady=20)
+
+def inputvalidation():
+    try:
+
+        if  int(secs.get()) < 0 or int(secs.get()) > 59:
+            messagebox.showerror("invalid input", "It must be smaller than 59 or greater than 0")
+            return False
+        if int(mins.get()) < 0 or int(mins.get()) > 59:
+            messagebox.showerror("invalid input", "It must be smaller than 59 or greater than 0")
+            return False
+        if int(hours.get()) < 0 or int(hours.get()) > 99:
+            messagebox.showerror("invalid input", "It must be smaller than 100 or greater than 0")
+            return False
+        if hours.get() == "00" and mins.get() == "00" and secs.get() == "00":
+           messagebox.showerror("Invalid Time", "Time must be greater than 00:00:00.")
+           return  False
+     
+        return True
+    except ValueError:
+        messagebox.showerror("Invalid Input","Ah boi do uk how to use a timer")
+        return False
+
+#timer function
+def timer():
+    if not inputvalidation():
+        return
+    
+    totaltime = int(hours.get())*3600 + int(mins.get())*60 + int(secs.get())
+
+    create_time = time.strftime("%Y-%m-%d %H:%M:%S")
+    purpose_text = purpose.get()
+
+    #saving func
+    with open("timerhistory.txt","a") as f:
+        f.write(f"{create_time} - {purpose_text} ({hours.get()}:{mins.get()}:{secs.get()})\n")
+    
+    ntimer = tk.Frame(timers_frame)
+    ntimer.pack(pady=5)
+
+    ntimer_label = tk.Label(ntimer, text="", font=("Arial", 18))
+    ntimer_label.pack(side=tk.LEFT)
+
+    purposetext = tk.Label(ntimer, text=f"for {purpose_text}")
+    purposetext.pack(side=tk.LEFT)
+
+    remaining_time = [totaltime]
+    paused = [False]
+
+    def countdown(timeleft):
+        if timeleft >= 0:
+            hourss,remainder = divmod(timeleft,3600)
+            minss,secss = divmod(remainder,60)
+            ntimer_label.config(text=f"{hourss:02}:{minss:02}:{secss:02}")
+            if not paused[0]:
+                root.after(1000, countdown, timeleft - 1)
+            remaining_time[0] = timeleft
+        else:
+            ntimer_label.config(text="DONE!", fg="green")
+            winsound.Beep(1000, 500) 
+            messagebox.showinfo("ALERT", f"TIMES UP for '{purpose_text}'")
+
+    def pause():
+        paused[0] = True
+        pause_btn.config(state="disabled")
+        resume_btn.config(state="normal")
+    
+    def resume():
+        paused[0] = False
+        countdown(remaining_time[0])
+        resume_btn.config(state="disabled")
+        pause_btn.config(state="normal")
+    
+    def clear():
+        paused[0] = True
+        ntimer.destroy()
+        resume_btn.config(state="disabled")
+        pause_btn.config(state="normal")
+
+    pause_btn = tk.Button(ntimer, text="⏸ Pause", command=pause)
+    pause_btn.pack(side=tk.LEFT)
+
+    resume_btn = tk.Button(ntimer, text="▶ Resume", command=resume)
+    resume_btn.pack(side=tk.LEFT)
+
+    clear_btn = tk.Button(ntimer, text="❌ Clear", command=clear)
+    clear_btn.pack(side=tk.LEFT)
+
+    hours.set("00")
+    mins.set("00")
+    secs.set("00")
+    purpose.set("")
+
+    countdown(totaltime)  
+      
+start_btn = tk.Button(timer_frame, text="Start New Timer", command=timer)
+start_btn.pack()
+
+def open_history_window():
+    history_window = tk.Toplevel(timer_frame)
+    history_window.title("History")
+    history_window.geometry("400x400")
+    history_label = tk.Label(history_window, text="History Here", font=("Arial", 16))
+    history_label.pack(pady=20)
+    history_text = tk.Text(history_window, wrap=tk.WORD)
+    history_text.pack()
+
+    try:
+        with open("timerhistory.txt", "r") as f:
+            content = f.read()
+            history_text.insert(tk.END, content)
+    except FileNotFoundError:
+        history_text.insert(tk.END, "No history yet.")
+
+history_button = tk.Button(timer_frame, text="History", command=open_history_window)
+history_button.place(relx=0.0, rely=1.0, x=10, y=-10, anchor="sw")
+
+clock()
+
+
 #calendar section
 calendar_lbl= tk.Label(calendar_frame,text="Calendar",bg="white",font=('Arial',30))
 calendar_lbl.place(x=0,y=0)
@@ -1064,6 +1234,191 @@ load_remarks()
 #todolist section
 todolist_lbl= tk.Label(todolist_frame,text="To- Do-List",bg="white", font=('Arial',30))
 todolist_lbl.place(x=0,y=0)
+
+input_frame = tk.Frame(todolist_frame)
+input_frame.pack(pady=10, fill="x") 
+
+#task entry
+task_label = tk.Label(input_frame, text="Task")
+task_label.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+
+task_entry = tk.Entry(input_frame, width=40)
+task_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")  
+
+#priority
+priority_label = tk.Label(input_frame, text="Priority")
+priority_label.grid(row=0, column=2, padx=5, pady=5, sticky="w")
+
+priority_frame = tk.Frame(input_frame)
+priority_frame.grid(row=0, column=3, padx=5, pady=5, sticky="w")
+
+priority_var = StringVar()
+priority_var.set("Medium")
+
+tk.Radiobutton(priority_frame, text="High", variable=priority_var, value="High").pack(side="left")
+tk.Radiobutton(priority_frame, text="Medium", variable=priority_var, value="Medium").pack(side="left")
+tk.Radiobutton(priority_frame, text="Low", variable=priority_var, value="Low").pack(side="left")
+
+#add task function
+def addtask(event = None):
+        date = time.strftime("%Y-%m-%d")                                                        #get date
+        task = task_entry.get()                                                                 #get task
+        priority = priority_var.get()                                                           #get priority
+        if task == "" :                                                                         #show no task or not
+            messagebox.showerror("task","no task")                                              
+        else:                                                                                   
+            task_tree.insert("", "end", values=("☐", date, task, priority), tags=(priority))   #add task to list 
+            task_entry.delete(0, tk.END)                                                       #delete entry after task added  
+        
+        tdl_task()                                                                             #save to txt file
+
+#delete task function
+def deletetask():
+        whichtask = task_tree.selection()                                                       #see which task selecred
+        if whichtask:                           
+            task_tree.delete(whichtask)                                                         #delete selected task
+        else:
+             messagebox.showerror("Error","No task selected")                                   #if didnt select task
+
+        tdl_task()                                                                              #update the txt file
+
+completed_task = []                                                                             #list to hold completed tasks
+
+#toggle function
+def togglecheckbox(event):
+    selected = task_tree.selection()                                                            #get task              
+    if selected:
+        for task in selected:
+            status = list(task_tree.item(task, "values"))                                       #get task data in list 
+            if status[0] == "☐":
+                status[0] = "☑"
+                completed_task.append(status)                                                   #add to completed list
+                task_tree.delete(task)                                                          #delete from the task tree list
+    
+    tdl_task()
+    tracker_task()
+
+completed_tasktree = None                                                                       #global the treeview
+
+#untoggle function
+def undo_completedtask(event):
+    selected = completed_tasktree.selection()
+    if selected:
+        for task in selected:
+            status = list(completed_tasktree.item(task, "values"))
+            if status[0] == "☑":
+                status[0] = "☐"
+                task_tree.insert("", "end", values=status, tags=status[3])                      #reinsert the task to list with correct values
+                completed_tasktree.delete(task)                                                 #delete the task from tracker
+
+                for task in completed_task:
+                    if task[1:] == status[1:]:                                                  #compare the task values
+                        completed_task.remove(task)                                             #if match then remove it
+                        break   
+    
+    tdl_task()
+    tracker_task()
+
+button_frame = tk.Frame(todolist_frame)
+button_frame.pack(pady=10, fill="x")
+
+addtask_btn = tk.Button(button_frame, text="Add Task", command=addtask)
+addtask_btn.pack(side="left", padx=10, pady=5) 
+
+deltask_btn = tk.Button(button_frame, text="Delete Task", command=deletetask)
+deltask_btn.pack(side="left", padx=10, pady=5)
+
+listbox_frame = tk.Frame(todolist_frame)
+listbox_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+section = ("status", "Date", "Task", "Priority")
+task_tree = ttk.Treeview(listbox_frame, columns=section, show="headings")
+
+task_tree.heading("status", text="Status")
+task_tree.column("status", width=50, stretch=tk.NO) 
+task_tree.heading("Date", text="Date")
+task_tree.column("Date", width=100, stretch=tk.NO)  
+task_tree.heading("Task", text="Task")
+task_tree.column("Task", width=300, stretch=tk.YES)  
+task_tree.heading("Priority", text="Priority")
+task_tree.column("Priority", width=100, stretch=tk.NO)
+
+task_tree.pack(fill="both", expand=True)
+task_tree.bind("<Double-1>", togglecheckbox)
+
+task_tree.tag_configure("High", background="#ff9999")   
+task_tree.tag_configure("Medium", background="#ffff99")  
+task_tree.tag_configure("Low", background="#ccffcc")     
+
+task_entry.bind("<Return>", addtask)
+
+def completion_tracker():
+    global completed_tasktree
+    completiontracker = tk.Toplevel(todolist_frame)  
+    completiontracker.title("Completion Tracker")
+    completiontracker.geometry("500x500")
+    
+    if not completed_task:
+        label = tk.Label(completiontracker, text="No completed tasks yet.")
+        label.pack(pady=20)
+        return
+    
+    else:
+        completed_tasktree = ttk.Treeview(completiontracker, columns=section, show="headings")
+        completed_tasktree.heading("status", text="Status")
+        completed_tasktree.column("status", width=50, stretch=tk.NO) 
+        completed_tasktree.heading("Date", text="Date")
+        completed_tasktree.column("Date", width=70, stretch=tk.NO)  
+        completed_tasktree.heading("Task", text="Task")
+        completed_tasktree.column("Task", width=100, stretch=tk.YES)  
+        completed_tasktree.heading("Priority", text="Priority")
+        completed_tasktree.column("Priority", width=80, stretch=tk.NO)
+
+        for task in completed_task:
+            completed_tasktree.insert("", "end", values=task)
+
+        completed_tasktree.pack(fill="both", expand=True, padx=10, pady=10)
+        completed_tasktree.bind("<Double-1>", undo_completedtask)
+
+completion_tracker_btn = tk.Button(button_frame, text="Completion Tracker", command=completion_tracker)
+completion_tracker_btn.pack(side="right", padx=10, pady=5)
+
+
+def tdl_task():
+    with open ("tdltask.txt", "w", encoding="utf-8") as file:                               
+        for task in task_tree.get_children():
+            values = task_tree.item(task)["values"]                                                 #get task values
+            content = f"{values[0]} | {values[1]} | {values[2]} | {values[3]}\n"                    #split em in |
+            file.write(content)
+
+def tracker_task():
+    with open ("trackertask.txt", "w", encoding="utf-8") as file:
+        for task in completed_task:
+            content = f"{task[0]} | {task[1]} | {task[2]} | {task[3]}\n"
+            file.write(content)
+
+
+def load_txt():
+    try:
+        with open ("tdltask.txt", "r", encoding="utf-8") as file:
+            for content in file:
+                parts = content.strip().split(" | ")                                                #split content into parts
+                if len(parts) == 4:                                                                 #check wheter have 4 parts
+                    task_tree.insert("", "end", values=parts, tags=(parts[3]))                      #true then insert all of the values
+    except FileNotFoundError:
+        pass
+
+    try:
+        with open("trackertask.txt", "r", encoding="utf-8") as file:
+            for content in file:
+                parts = content.strip().split(" | ")
+                if len(parts) == 4:
+                    completed_task.append(parts)
+    except FileNotFoundError:
+        pass
+
+
+load_txt()
 
 
 show_frame(home_frame)
