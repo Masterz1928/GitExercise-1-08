@@ -21,15 +21,15 @@ def update_file_list():
         file_listbox.insert(tk.END, file)
 
 def deleting_notes():
-    selected_files = file_listbox.curselection() #Get the file that the user selected 
-    if not selected_files: # IF no files are selected, then do this  
+    selected_files = file_listbox.curselection() #Get the file that the user selected
+    if not selected_files: # IF no files are selected, then do this
         messagebox.showwarning("No selection", "Select a file to delete.") #Prompt the User
-        return #Basically telling python to stop runninng this part and go out of this block of code 
-    file_delete_name = file_listbox.get(selected_files[0]) # Since the selected_files variable contains a tuple, we take the first value e.g. (1,) 
+        return #Basically telling python to stop runninng this part and go out of this block of code
+    file_delete_name = file_listbox.get(selected_files[0]) # Since the selected_files variable contains a tuple, we take the first value e.g. (1,)
     confirm = messagebox.askyesno("Delete?", f"Are you sure you want to delete '{file_delete_name}'?")
     if confirm:
-        os.remove(os.path.join(folder_path, file_delete_name)) # Removes the file 
-        update_file_list() #Updates the Listbox 
+        os.remove(os.path.join(folder_path, file_delete_name)) # Removes the file
+        update_file_list() #Updates the Listbox
 
 
 #function for listbox
@@ -221,7 +221,7 @@ def search_notes(event=None):
     file_listbox.delete(0, tk.END)  # Clear the current list in the listbox
 
     # Loop through all files and add those that match the search term
-    files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
+    files = [f for f in os.listdir(folder_path) if f.endswith(".txt",".md",".html")]
     for file in files:
         if search_term in file.lower():  # Case-insensitive comparison
             file_listbox.insert(tk.END, file)
@@ -234,7 +234,7 @@ def clear_search():
 def export_all_notes():
     export_path = "all_notes_export.txt"
     with open(export_path, "w", encoding="utf-8") as export_file:
-        files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
+        files = [f for f in os.listdir(folder_path) if f.endswith(".txt",".html",".md")]
         if not files:
             messagebox.showinfo("Info", "No notes to export.")
             return
@@ -258,7 +258,7 @@ def export_notes_with_format():
 
 
 def export_all_notes_as_zip():
-    files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
+    files = [f for f in os.listdir(folder_path) if f.endswith(".txt",".html",".md")]
     if not files:
         messagebox.showinfo("Info", "No notes to export.")
         return
@@ -312,6 +312,71 @@ def perform_advanced_search():
     else:
         messagebox.showinfo("Search", "No matches found.")
 
+def deleting_notes():
+    selected_files = file_listbox.curselection()
+    if not selected_files:
+        messagebox.showwarning("No selection", "Select a file to delete.")
+        return
+
+    file_delete_name = file_listbox.get(selected_files[0])
+    confirm = messagebox.askyesno("Delete?", f"Move '{file_delete_name}' to Trash?")
+    if confirm:
+        original_path = os.path.join(folder_path, file_delete_name)
+        trash_path = os.path.join(trash_folder, file_delete_name)
+        os.rename(original_path, trash_path)
+        update_file_list()
+        messagebox.showinfo("Deleted", f"'{file_delete_name}' moved to Trash.")
+
+def open_trash_bin():
+    trash_win = tk.Toplevel(root)
+    trash_win.title("Trash Bin")
+    trash_win.geometry("500x400")
+
+    tk.Label(trash_win, text="Deleted Notes", font=("Arial", 16)).pack(pady=10)
+
+    trash_listbox = tk.Listbox(trash_win, width=60, height=15)
+    trash_listbox.pack(pady=10)
+
+    deleted_files = os.listdir(trash_folder)
+    for file in deleted_files:
+        trash_listbox.insert(tk.END, file)
+
+    def restore_file():
+        selected = trash_listbox.curselection()
+        if not selected:
+            messagebox.showinfo("Restore", "Please select a file.")
+            return
+
+        filename = trash_listbox.get(selected[0])
+        from_path = os.path.join(trash_folder, filename)
+        to_path = os.path.join(folder_path, filename)
+
+        if os.path.exists(to_path):
+            messagebox.showerror("Restore Failed", f"A file named '{filename}' already exists.")
+            return
+
+        os.rename(from_path, to_path)
+        trash_listbox.delete(selected[0])
+        update_file_list()
+        messagebox.showinfo("Restored", f"'{filename}' has been restored.")
+
+    def delete_all_files():
+        confirm = messagebox.askyesno("Delete All", "Are you sure you want to permanently delete all files in the Trash Bin?")
+        if confirm:
+            deleted_files = os.listdir(trash_folder)
+            for file in deleted_files:
+                file_path = os.path.join(trash_folder, file)
+                os.remove(file_path)
+            trash_listbox.delete(0, tk.END)  # Clear the listbox
+            messagebox.showinfo("Deleted All", "All files have been permanently deleted from the Trash Bin.")
+
+    restore_btn = tk.Button(trash_win, text="Restore Selected", command=restore_file)
+    restore_btn.pack(pady=10)
+
+    delete_all_btn = tk.Button(trash_win, text="Delete All", command=delete_all_files)
+    delete_all_btn.pack(pady=10)
+
+
 root= tk.Tk()
 #the title show on the top
 root.title("MMU Study Buddy")
@@ -322,7 +387,8 @@ root.state("zoomed")
 remarks={}
 pinned_files = []
 folder_path = "C:/Notes"
-
+trash_folder = os.path.join(folder_path, "Trash")
+os.makedirs(trash_folder, exist_ok=True)
 
 
 # Create a menu for right-click (context menu)
@@ -398,7 +464,9 @@ tree_menu.add_command(label="Unpin", command=lambda: unpin_from_tree())
 file_listbox.bind("<Button-3>", show_listbox_menu)# the right click function and bind with the show_list_menu function
 search_entry.bind("<KeyRelease>", search_notes)
 clear_search_button = tk.Button(top_frame, text="Clear", command=clear_search)
-clear_search_button.place(relx=0.9, rely=0.5, anchor="center")  # Position it next to the search bar
+clear_search_button.place(relx=0.7, rely=0.5, anchor="center")  # Position it next to the search bar
+btn_trash = tk.Button(top_frame, text="Trash Bin", command=open_trash_bin)
+btn_trash.place(relx=0.75, rely=0.5, anchor="center")
 
 update_file_list()
 
@@ -428,7 +496,7 @@ pinnednote_lbl.place(x=15,y=550)
 tree = ttk.Treeview(home_frame, columns=("Name",), show="headings", height=10)
 tree.heading("Name", text="File Name",)
 tree.column("Name", width=1325)
-tree.place(x=20, y=600)
+tree.pack(padx=10,pady=50)
 tree.bind("<Button-3>", show_tree_menu)
 load_pinned_notes()
 
