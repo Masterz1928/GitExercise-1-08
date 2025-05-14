@@ -500,7 +500,7 @@ pinnednote_lbl.place(x=15,y=550)
 tree = ttk.Treeview(home_frame, columns=("Name",), show="headings", height=10)
 tree.heading("Name", text="File Name",)
 tree.column("Name", width=1325)
-tree.pack(padx=10,pady=50)
+tree.pack(padx=10,pady=80)
 tree.bind("<Button-3>", show_tree_menu)
 load_pinned_notes()
 
