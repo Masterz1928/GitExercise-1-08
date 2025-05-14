@@ -560,9 +560,11 @@ def main_api():
     show_files()
     # Creating a function to upload user's selection of folders 
     def User_Selection_Of_Upload_File():
+        global service
         # if the user didnt sign in
         if service is None:
             messagebox.showerror("Error", "You're not signed in. Please sign in first.")
+            print(service)
             return
         # get user selection 
         selection = file_listbox.curselection()
@@ -579,7 +581,7 @@ def main_api():
             # to avoid lag or inresponsive behavoir 
             threading.Thread(target=upload_file_to_drive, args=(service, filename, filepath, folder_id)).start()
         else:
-            print("No file selected for upload.")
+            messagebox.showerror("No selected File","No file selected for upload.")
     # create a function to list out the file that have been uuploaded 
     def list_files_from_drive(service):
         try:
@@ -602,6 +604,7 @@ def main_api():
         
 
     def open_drive_files_window():
+        global service
         if service is None:
             messagebox.showerror("Error", "You're not signed in.")
             return
@@ -660,7 +663,6 @@ def main_api():
     ShowUploadedFilesButton.pack(pady=10)
 
 
-    global service  # Ensure service is declared once globally
     service = authenticate_google_account()  # Authenticate once at the start
     UploadButton.config(state="normal")
     LogOutButton.config(state="normal")
