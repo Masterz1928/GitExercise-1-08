@@ -44,7 +44,34 @@ logo_label = tk.Label(top_frame,
                       fg=LOGO_COLOR,
                       anchor='w')
 logo_label.pack(side='left', padx=20, pady=10)
+def open_drive_panel():
+    drive_window = tk.Toplevel()
+    drive_window.title("Drive Panel")
+    drive_window.resizable(False, False)
 
+    # Dimensions and position (top-right)
+    window_width = 300
+    window_height = 320
+    screen_width = drive_window.winfo_screenwidth()
+    screen_height = drive_window.winfo_screenheight()
+    x_position = screen_width - window_width - 10
+    y_position = 10
+    drive_window.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
+    drive_window.configure(bg="#f0f0f0")
+
+    # Button style
+    button_style = {"font": ("Arial", 10, "bold"), "bg": "#4caf50", "fg": "white", "relief": "raised", "bd": 2}
+
+    # Buttons
+    tk.Button(drive_window, text="Download", **button_style).pack(pady=10, ipadx=10, ipady=5)
+    tk.Button(drive_window, text="Upload", **button_style).pack(pady=10, ipadx=10, ipady=5)
+    tk.Button(drive_window, text="Go to Drive", **button_style).pack(pady=10, ipadx=10, ipady=5)
+    tk.Button(drive_window, text="Reload", **button_style).pack(pady=10, ipadx=10, ipady=5)
+    tk.Button(drive_window, text="Log Out", bg="#f44336", fg="white", font=("Arial", 10, "bold"), relief="raised", bd=2).pack(pady=10, ipadx=10, ipady=5)
+
+
+btn_drive = tk.Button(top_frame, text="Drive", command=open_drive_panel)
+btn_drive.pack(side="right", padx=10)
 # ------------------- Notebook Style -------------------
 style = ttk.Style()
 style.theme_use('default')
@@ -70,6 +97,7 @@ notebook.pack(fill='both', expand=True)
 home = tk.Frame(notebook, bg=WHITE_BG)
 notebook.add(home, text="🏠 Home")
 
+
 home_title = tk.Label(home,
                       text="💖 Welcome to MMU Study Buddy 💖",
                       font=FONT_HEADING,
@@ -79,7 +107,6 @@ home_title.pack(pady=20)
 
 card_frame = tk.Frame(home, bg=WHITE_BG)
 card_frame.pack(pady=10)
-
 
 def create_feature_card(parent, icon, title, desc, tab_index):
     card = tk.Frame(parent, bg=PINK_ACCENT, bd=1, relief="flat", highlightthickness=2,
@@ -189,7 +216,7 @@ def export_notes_with_format():
 
 
 def export_all_notes_as_zip():
-    files = [f for f in os.listdir(folder_path) if f.endswith(".txt",".html",".md")]
+    files = [f for f in os.listdir(folder_path) if f.endswith((".txt", ".html", ".md"))]
     if not files:
         messagebox.showinfo("Info", "No notes to export.")
         return
