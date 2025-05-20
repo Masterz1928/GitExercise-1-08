@@ -2,48 +2,49 @@ import tkinter as tk
 from tkinter import ttk, messagebox, colorchooser
 from tkcalendar import Calendar
 import os
-from datetime import datetime
+import datetime
 import zipfile
 
 
-# ------------------- Theme Settings -------------------
-WHITE_BG = "#fdfcfa"
-PINK_BG = "#e6e6fa"
-PINK_ACCENT = "#e6e6fa"
-PINK_SELECTED = "#d8bfd8"
-TEXT_COLOR = "#4b3869"
-LOGO_COLOR = "#800080"
+# color settings
+WHITE_BG       = "#fdfcfa"
+BLUE_BG        = "#e8f0fe"
+BLUE_ACCENT    = "#cfe2ff"
+BLUE_SELECTED  = "#a7c7e7"
+TEXT_COLOR     = "#2c3e50"
+LOGO_COLOR     = "#1f4e79"
 
 FONT_LOGO = ("Segoe UI", 14, "bold")
 FONT_HEADING = ("Segoe UI", 18, "bold")
 FONT_TEXT = ("Segoe UI", 11)
 
-# ------------------- Global Paths and Variables -------------------
 
+
+# all the path and source
 remarks={}
 pinned_files = []
 folder_path = "C:/Notes"
 trash_folder = os.path.join(folder_path, "Trash")
 os.makedirs(trash_folder, exist_ok=True)
 
-# ------------------- Main Window -------------------
+#main page code
 root = tk.Tk()
 root.title("🎓 MMU Study Buddy")
 root.geometry("900x600")
 root.configure(bg=WHITE_BG)
 root.minsize(700, 500)
 
-# ------------------- Logo Bar -------------------
-top_frame = tk.Frame(root, bg=WHITE_BG, height=60)
+top_frame = tk.Frame(root, bg=BLUE_BG, height=60)  # Use new blue background
 top_frame.pack(fill='x')
 
 logo_label = tk.Label(top_frame,
-                      text="🎓 MMU Study Buddy",
+                      text="📘 MMU Study Buddy",  # Changed to a blue-themed emoji
                       font=FONT_LOGO,
-                      bg=WHITE_BG,
-                      fg=LOGO_COLOR,
+                      bg=BLUE_BG,
+                      fg=LOGO_COLOR,             # Royal Blue text
                       anchor='w')
 logo_label.pack(side='left', padx=20, pady=10)
+
 def open_drive_panel():
     drive_window = tk.Toplevel()
     drive_window.title("Drive Panel")
@@ -72,60 +73,95 @@ def open_drive_panel():
 
 btn_drive = tk.Button(top_frame, text="Drive", command=open_drive_panel)
 btn_drive.pack(side="right", padx=10)
-# ------------------- Notebook Style -------------------
+
+#notebook tab style
 style = ttk.Style()
 style.theme_use('default')
 style.configure('TNotebook', background=WHITE_BG, borderwidth=0)
 style.configure('TNotebook.Tab',
-                background=PINK_ACCENT,
+                background=BLUE_ACCENT,
                 foreground=TEXT_COLOR,
                 padding=[20, 10],
                 font=("Segoe UI", 10, "bold"),
                 borderwidth=0)
 style.map("TNotebook.Tab",
-          background=[("selected", PINK_SELECTED)],
+          background=[("selected", BLUE_SELECTED)],
           expand=[("selected", [1, 1, 1, 0])])
 
-# ------------------- Notebook Area -------------------
+#notebook area
 notebook_frame = tk.Frame(root, bg=WHITE_BG)
 notebook_frame.pack(fill='both', expand=True, padx=20, pady=(0, 20))
 
 notebook = ttk.Notebook(notebook_frame)
 notebook.pack(fill='both', expand=True)
 
-# ------------------- Home Tab with Feature Cards -------------------
+#home tab with feature card
 home = tk.Frame(notebook, bg=WHITE_BG)
 notebook.add(home, text="🏠 Home")
 
 
 home_title = tk.Label(home,
-                      text="💖 Welcome to MMU Study Buddy 💖",
+                      text="🌟 Welcome to Your MMU Study Buddy! 🌟",
                       font=FONT_HEADING,
                       bg=WHITE_BG,
                       fg=TEXT_COLOR)
 home_title.pack(pady=20)
 
+
+def get_greeting():
+    current_hour = datetime.datetime.now().hour
+    if 5 <= current_hour < 12:
+        return "🌞 Good Morning!"
+    elif 12 <= current_hour < 18:
+        return "🌤️ Good Afternoon!"
+    elif 18 <= current_hour < 21:
+        return "🌆 Good Evening!"
+    else:
+        return "🌙 Good Night!"
+
+
+def fade_in(widget, delay=30, steps=10):
+    colors = [
+        "#CCCCCC", "#BBBBBB", "#AAAAAA", "#999999", "#888888",
+        "#777777", "#666666", "#444444", "#222222", "#000000"
+    ]
+
+    def step(i=0):
+        if i < len(colors):
+            widget.configure(foreground=colors[i])
+            widget.after(delay, step, i + 1)
+
+    step()
+
+# Add inside your `home_frame` setup
+greeting_text = get_greeting()
+greeting_label = tk.Label(home, text=greeting_text, font=("Segoe UI", 14, "bold"), fg="#000000", bg=home["bg"])
+greeting_label.pack(pady=(10, 0))
+
+# Start fade-in effect
+fade_in(greeting_label)
+
 card_frame = tk.Frame(home, bg=WHITE_BG)
 card_frame.pack(pady=10)
 
 def create_feature_card(parent, icon, title, desc, tab_index):
-    card = tk.Frame(parent, bg=PINK_ACCENT, bd=1, relief="flat", highlightthickness=2,
-                    highlightbackground=PINK_SELECTED)
+    card = tk.Frame(parent, bg=BLUE_ACCENT, bd=1, relief="flat", highlightthickness=2,
+                    highlightbackground=BLUE_SELECTED)
     card.bind("<Button-1>", lambda e: notebook.select(tab_index))
 
-    def on_enter(e): card.config(bg=PINK_SELECTED)
-    def on_leave(e): card.config(bg=PINK_ACCENT)
+    def on_enter(e): card.config(bg=BLUE_SELECTED)
+    def on_leave(e): card.config(bg=BLUE_ACCENT)
 
     card.bind("<Enter>", on_enter)
     card.bind("<Leave>", on_leave)
 
-    icon_label = tk.Label(card, text=icon, font=("Segoe UI Emoji", 30), bg=PINK_ACCENT)
+    icon_label = tk.Label(card, text=icon, font=("Segoe UI Emoji", 30), bg=BLUE_ACCENT)
     icon_label.pack(pady=(10, 0))
 
-    title_label = tk.Label(card, text=title, font=("Segoe UI", 13, "bold"), bg=PINK_ACCENT, fg=TEXT_COLOR)
+    title_label = tk.Label(card, text=title, font=("Segoe UI", 13, "bold"), bg=BLUE_ACCENT, fg=TEXT_COLOR)
     title_label.pack(pady=(5, 0))
 
-    desc_label = tk.Label(card, text=desc, font=("Segoe UI", 10), bg=PINK_ACCENT, fg=TEXT_COLOR, wraplength=180,
+    desc_label = tk.Label(card, text=desc, font=("Segoe UI", 10), bg=BLUE_ACCENT, fg=TEXT_COLOR, wraplength=180,
                           justify="center")
     desc_label.pack(pady=(5, 10))
 
@@ -138,8 +174,8 @@ notebook.add(timer_tab, text="⏲ Timer")
 
 todo_tab = tk.Frame(notebook, bg=WHITE_BG)
 notebook.add(todo_tab, text="✅ To-Do List")
-# ------------------- Notes Functions -------------------
 
+# all note function
 def update_file_list():
     file_listbox.delete(0, tk.END)
     files = [f for f in os.listdir(folder_path) if f.endswith((".txt", ".md", ".html"))]
@@ -150,9 +186,17 @@ def search_notes():
     search_term = search_entry.get().lower()
     file_listbox.delete(0, tk.END)
     files = [f for f in os.listdir(folder_path) if f.endswith((".txt", ".md", ".html"))]
+
     for file in files:
-        if search_term in file.lower():
-            file_listbox.insert(tk.END, file)
+        file_path = os.path.join(folder_path, file)
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read().lower()
+            if search_term in content:
+                file_listbox.insert(tk.END, file)
+        except Exception as e:
+            # Optional: handle unreadable files gracefully
+            print(f"Could not read {file}: {e}")
 
 def perform_advanced_search():
     query = search_entry.get().strip().lower()
@@ -211,9 +255,6 @@ def export_notes_with_format():
 
     if format_choice == "yes":
         export_all_notes_as_zip()
-    else:
-        None
-
 
 def export_all_notes_as_zip():
     files = [f for f in os.listdir(folder_path) if f.endswith((".txt", ".html", ".md"))]
@@ -419,7 +460,7 @@ btn_open.pack(side='left', padx=5)
 btn_delete = ttk.Button(note_btn_frame, text="Delete Note", command=lambda: deleting_notes())
 btn_delete.pack(side='left', padx=5)
 
-btn_export = ttk.Button(note_btn_frame, text="Export Notes", command=lambda: export_all_notes())
+btn_export = ttk.Button(note_btn_frame, text="Export Notes", command=lambda: export_notes_with_format())
 btn_export.pack(side='left', padx=5)
 
 listbox_menu = tk.Menu(card_frame, tearoff=0)# tear off is the dash line in the menu list
@@ -528,27 +569,58 @@ def display_remark_for_date(event=None):
     if selected_date in remarks:
         remark_text.insert("1.0", remarks[selected_date])
 
-# Theme dropdown
-theme_var = tk.StringVar()
-theme_var.set("Choose Theme")
-theme_options = ["Pink", "Blue", "Purple", "Custom"]
-theme_menu = tk.OptionMenu(calendar_tab, theme_var, *theme_options, command=apply_theme)
-theme_menu.config(font=("Arial", 12), bg="#f0f0f0")
-theme_menu.pack(pady=10)
+def view_all_remarks():
+    if not remarks:
+        messagebox.showinfo("Remarks", "No saved remarks.")
+        return
+    remark_window = tk.Toplevel()
+    remark_window.title("All Remarks")
+    remark_window.geometry("400x300")
 
-# Save button
-save_btn = tk.Button(calendar_tab, text="Save Remark", command=save_remark_for_date, font=("Arial", 12))
-save_btn.pack(pady=5)
+    text_widget = tk.Text(remark_window, wrap="word", font=("Arial", 12))
+    text_widget.pack(expand=True, fill="both", padx=10, pady=10)
+
+    for date, remark in sorted(remarks.items()):
+        text_widget.insert(tk.END, f"{date}: {remark}\n\n")
+
+def clear_remark_for_date():
+    selected_date = cal.get_date()
+    remark_text.delete("1.0", tk.END)
+    if selected_date in remarks:
+        del remarks[selected_date]  # Remove the saved remark
+        save_remarks()  # Save updated remarks to file
+    messagebox.showinfo("Cleared", f"Remark for {selected_date} cleared.")
+
+button_frame = tk.Frame(calendar_tab, bg=WHITE_BG)
+button_frame.pack(pady=10)
+
+save_button = tk.Button(button_frame, text="💾 Save Remark", command=save_remark_for_date)
+save_button.grid(row=0, column=0, padx=5)
+
+clear_button = tk.Button(button_frame, text="🧹 Clear Remark", command=clear_remark_for_date)
+clear_button.grid(row=0, column=1, padx=5)
+
+theme_button = tk.Menubutton(button_frame, text="🎨 Theme", relief=tk.RAISED)
+theme_menu = tk.Menu(theme_button, tearoff=0)
+theme_menu.add_command(label="Pink", command=lambda: apply_theme("Pink"))
+theme_menu.add_command(label="Blue", command=lambda: apply_theme("Blue"))
+theme_menu.add_command(label="Purple", command=lambda: apply_theme("Purple"))
+theme_menu.add_command(label="Custom", command=lambda: apply_theme("Custom"))
+theme_button.config(menu=theme_menu)
+theme_button.grid(row=0, column=2, padx=5)
+
+view_all_button = tk.Button(button_frame, text="📋 View All Remarks", command=view_all_remarks)
+view_all_button.grid(row=0, column=3, padx=5)
 
 # Bind calendar selection to display remark
 cal.bind("<<CalendarSelected>>", display_remark_for_date)
 
 # Load saved remarks on startup
 load_remarks()
-card1 = create_feature_card(card_frame, "⏲", "Timer", "Start/stop Pomodoro or normal timer.", 1)
-card2 = create_feature_card(card_frame, "✅", "To-Do List", "Manage your daily tasks efficiently.", 2)
-card3 = create_feature_card(card_frame, "📝", "Notes", "Create, search, pin, and manage notes.", 3)
-card4 = create_feature_card(card_frame, "📅", "Calendar", "Add remarks to calendar dates.", 4)
+card1 = create_feature_card(card_frame, "⏲", "Timer", "Stay calm and focused in your study with the timer.", 1)
+card2 = create_feature_card(card_frame, "✅", "To-Do List", "Organize tasks and boost daily productivity.", 2)
+card3 = create_feature_card(card_frame, "📝", "Notes", "Write, pin, search, and export your study notes.", 3)
+card4 = create_feature_card(card_frame, "📅", "Calendar", "Attach notes or events to any calendar date.", 4)
 
 card1.grid(row=0, column=0, padx=15, pady=15)
 card2.grid(row=0, column=1, padx=15, pady=15)
