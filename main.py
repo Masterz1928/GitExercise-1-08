@@ -54,7 +54,6 @@ def open_drive_panel():
     window_width = 300
     window_height = 320
     screen_width = drive_window.winfo_screenwidth()
-    screen_height = drive_window.winfo_screenheight()
     x_position = screen_width - window_width - 10
     y_position = 10
     drive_window.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
@@ -141,8 +140,42 @@ greeting_label.pack(pady=(10, 0))
 # Start fade-in effect
 fade_in(greeting_label)
 
+def get_pinned_notes_from_txt():
+    notes = []
+    try:
+        with open("pinned_notes.txt", "r", encoding="utf-8") as file:
+            for line in file:
+                filename = line.strip()
+                if filename:
+                    notes.append(filename)
+        return notes[:3]
+    except FileNotFoundError:
+        return []
+
+def populate_pinned_preview(parent_frame):
+    for widget in parent_frame.winfo_children():
+        widget.destroy()
+
+    tk.Label(parent_frame, text="📌 Pinned Notes", font=("Arial", 12, "bold")).pack(anchor="w", padx=10, pady=(5, 0))
+
+    listbox = tk.Listbox(parent_frame, width=60, height=6, bg=WHITE_BG)
+    listbox.pack(fill="x", padx=10, pady=5)
+
+    pinned = get_pinned_notes_from_txt()
+    if pinned:
+        for filename in pinned:
+            listbox.insert("end", filename)
+    else:
+        listbox.insert("end", "No pinned notes.")
+
+
+
 card_frame = tk.Frame(home, bg=WHITE_BG)
 card_frame.pack(pady=10)
+
+pinned_preview_frame = ttk.Frame(home)
+pinned_preview_frame.pack(fill="x", padx=10, pady=(0, 10))
+
 
 def create_feature_card(parent, icon, title, desc, tab_index):
     card = tk.Frame(parent, bg=BLUE_ACCENT, bd=1, relief="flat", highlightthickness=2,
@@ -294,8 +327,9 @@ def pin_selected_note():
             if confirm:
                 pinned_files.append(file_name)
                 tree.insert("", tk.END, values=(file_name,))
-                messagebox.showinfo("Info", f"Pinned '{file_name}' successfully!")
                 save_pinned_notes()
+                populate_pinned_preview(pinned_preview_frame)
+                messagebox.showinfo("Info", f"Pinned '{file_name}' successfully!")
         else:
             messagebox.showinfo("Info", "This note is already pinned.")
 
@@ -314,6 +348,8 @@ def unpin_selected_note():
                     if tree.item(item, "values")[0] == file_name:
                         tree.delete(item)
                         break
+                save_pinned_notes()  # ✅ Save the updated list
+                populate_pinned_preview(pinned_preview_frame)
                 messagebox.showinfo("Info", f"Unpinned '{file_name}' successfully!")
         else:
             messagebox.showinfo("Remind", "This note is not pinned yet.")
@@ -339,6 +375,8 @@ def unpin_from_tree():
             if file_name in pinned_files:
                 pinned_files.remove(file_name)
             tree.delete(selected[0])
+            save_pinned_notes()  # ✅ Save the updated list
+            populate_pinned_preview(pinned_preview_frame)
             messagebox.showinfo("Info", f"Unpinned '{file_name}' successfully!")
     else:
         messagebox.showinfo("Remind", "Please select a pinned note first.")
@@ -357,7 +395,6 @@ def load_pinned_notes():
                 note = line.strip()
                 pinned_files.append(note)
                 tree.insert("", tk.END, values=(note,))
-
 
 def deleting_notes():
     selected_files = file_listbox.curselection()
@@ -627,6 +664,7 @@ card2.grid(row=0, column=1, padx=15, pady=15)
 card3.grid(row=0, column=2, padx=15, pady=15)
 card4.grid(row=0, column=3, padx=15, pady=15)
 
+populate_pinned_preview(pinned_preview_frame)
 
 update_file_list()
 
