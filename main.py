@@ -469,29 +469,35 @@ def create_sync_folder(service, parent_id):
     return folder['id']
 
 def upload_folder_files(service, local_folder_path, progress_queue):
-    if not os.path.exists(local_folder_path):
-        progress_queue.put("error:Folder not found")
-        return
+    try:
+        if not os.path.exists(local_folder_path):
+            progress_queue.put("error:Folder not found")
+            return
 
-    parent_id = get_or_create_main_folder(service)
-    sync_folder_id = create_sync_folder(service, parent_id)
+        parent_id = get_or_create_main_folder(service)
+        sync_folder_id = create_sync_folder(service, parent_id)
 
-    files = [f for f in os.listdir(local_folder_path) if os.path.isfile(os.path.join(local_folder_path, f))]
-    total_files = len(files)
+        files = [f for f in os.listdir(local_folder_path) if os.path.isfile(os.path.join(local_folder_path, f))]
+        total_files = len(files)
 
-    if total_files == 0:
-        progress_queue.put("error:No files to upload")
-        return
+        if total_files == 0:
+            progress_queue.put("error:No files to upload")
+            return
 
-    for i, filename in enumerate(files, start=1):
-        filepath = os.path.join(local_folder_path, filename)
-        file_metadata = {'name': filename, 'parents': [sync_folder_id]}
-        media = MediaFileUpload(filepath, resumable=True)
-        service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-        progress_queue.put((i, total_files))  # Progress update
+        for i, filename in enumerate(files, start=1):
+            filepath = os.path.join(local_folder_path, filename)
+            file_metadata = {'name': filename, 'parents': [sync_folder_id]}
+            media = MediaFileUpload(filepath, resumable=True)
+            service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+            progress_queue.put((i, total_files))  # Progress update
 
-    progress_queue.put("done")
-
+    except Exception as e:
+        progress_queue.put(f"error:{str(e)}")
+    finally:
+        # Ensure "done" is always sent unless an error already was
+        queue_contents = list(progress_queue.queue)
+        if not any(str(msg).startswith("error:") for msg in queue_contents):
+            progress_queue.put("done")
 
 # downloading 
 def get_latest_sync_folder(service, parent_folder_id):
