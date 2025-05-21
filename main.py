@@ -15,7 +15,6 @@ from tkinter import ttk, messagebox
 import tkinter as tk
 import threading 
 import queue
-import notepad
 
 def show_frame(frame):
     frame.tkraise()
@@ -734,7 +733,7 @@ def finish_auth(callback):
 button_frame = tk.Frame(home_frame, bg="white")
 button_frame.pack(pady=15)
 
-btn_new = tk.Button(button_frame, text="New", font=25, relief="flat", width=20, height=3, command=notepad.calling_notepad)
+btn_new = tk.Button(button_frame, text="New", font=25, relief="flat", width=20, height=3)
 btn_new.pack(side="left", padx=20)
 
 btn_open = tk.Button(button_frame, text="Open", font=25, relief="flat", width=20, height=3)
