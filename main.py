@@ -190,6 +190,13 @@ history_button = tk.Button(root, text="History", command=open_history_window)
 history_button.place(relx=0.0, rely=1.0, x=10, y=-10, anchor="sw")
 
 sound_path = StringVar(value="") 
+if os.path.exists("alarmpath.txt"):
+    with open("alarmpath.txt", "r") as f:
+        saved_alarm = f.read().strip()
+        if os.path.exists(saved_alarm):
+            sound_path.set(saved_alarm)
+        else:
+            messagebox.showwarning("Alarm Sound Not Found", "The previously saved alarm sound file was not found. Please select a new one.")
 
 def choose_sound():
     file = filedialog.askopenfilename(
@@ -198,6 +205,8 @@ def choose_sound():
     )
     if file:
         sound_path.set(file)
+        with open("alarmpath.txt", "w") as f:
+            f.write(file)
 
 select_button = tk.Button(root, text="🎵 Choose Alarm Sound", command=choose_sound)
 select_button.place(relx=1.0, rely=1.0, x=-10, y=-10, anchor="se")
