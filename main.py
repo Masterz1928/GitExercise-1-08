@@ -51,7 +51,10 @@ def addtask(event = None):
 def deletetask():
         whichtask = task_tree.selection()                                                       #see which task selecred
         if whichtask:                           
-            task_tree.delete(whichtask)                                                         #delete selected task
+            if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete the selected task?"):
+                task_tree.delete(whichtask)
+                tdl_task()
+                
         else:
              messagebox.showerror("Error","No task selected")                                   #if didnt select task
 
