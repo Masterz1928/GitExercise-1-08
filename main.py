@@ -462,124 +462,6 @@ def get_or_create_main_folder(service):
     folder = service.files().create(body=file_metadata, fields='id').execute()
     return folder['id']
 
-def create_sync_folder(service, parent_id):
-    now = datetime.now().strftime("Sync %Y-%m-%d %H-%M-%S")
-    file_metadata = {
-        'name': now,
-        'mimeType': 'application/vnd.google-apps.folder',
-        'parents': [parent_id]
-    }
-    folder = service.files().create(body=file_metadata, fields='id').execute()
-    return folder['id']
-
-def upload_folder_files(service, local_folder_path, progress_queue):
-    try:
-        if not os.path.exists(local_folder_path):
-            progress_queue.put("error:Folder not found")
-            return
-
-        parent_id = get_or_create_main_folder(service)
-        sync_folder_id = create_sync_folder(service, parent_id)
-
-        files = [f for f in os.listdir(local_folder_path) if os.path.isfile(os.path.join(local_folder_path, f))]
-        total_files = len(files)
-
-        if total_files == 0:
-            progress_queue.put("error:No files to upload")
-            return
-
-        for i, filename in enumerate(files, start=1):
-            filepath = os.path.join(local_folder_path, filename)
-            file_metadata = {'name': filename, 'parents': [sync_folder_id]}
-            media = MediaFileUpload(filepath, resumable=True)
-            service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-            progress_queue.put((i, total_files))  # Progress update
-
-    except Exception as e:
-        progress_queue.put(f"error:{str(e)}")
-    finally:
-        # Ensure "done" is always sent unless an error already was
-        queue_contents = list(progress_queue.queue)
-        if not any(str(msg).startswith("error:") for msg in queue_contents):
-            progress_queue.put("done")
-
-# downloading 
-def get_latest_sync_folder(service, parent_folder_id):
-    query = f"'{parent_folder_id}' in parents and mimeType='application/vnd.google-apps.folder' and name contains 'Sync' and trashed = false"
-    results = service.files().list(q=query, orderBy="createdTime desc", fields="files(id, name, createdTime)").execute()
-    folders = results.get('files', [])
-    return folders[0] if folders else None
-
-def download_latest_sync_folder(service, local_folder_path, progress_queue):
-    parent_id = get_or_create_main_folder(service)
-    latest_folder = get_latest_sync_folder(service, parent_id)
-    if not latest_folder:
-        progress_queue.put("error:No sync folders found")
-        return
-
-    folder_id = latest_folder['id']
-
-    query = f"'{folder_id}' in parents and trashed=false"
-    results = service.files().list(q=query, fields="files(id, name)").execute()
-    files = results.get('files', [])
-
-    total_files = len(files)
-    if total_files == 0:
-        progress_queue.put("error:No files in the sync folder")
-        return
-
-    os.makedirs(local_folder_path, exist_ok=True)
-
-    for i, file in enumerate(files, start=1):
-        file_id = file['id']
-        file_name = file['name']
-        request = service.files().get_media(fileId=file_id)
-        file_path = os.path.join(local_folder_path, file_name)
-        with open(file_path, 'wb') as f:
-            downloader = MediaIoBaseDownload(f, request)
-            done = False
-            while not done:
-                status, done = downloader.next_chunk()
-        progress_queue.put((i, total_files))
-
-    progress_queue.put("done")
-
-
-SYNC_LOG_PATH = r"C:\Notes\sync_log.txt"
-
-def save_last_sync_time():
-    with open(SYNC_LOG_PATH, "w") as f:
-        f.write(f"last_sync:{datetime.now()}")
-
-def should_prompt_sync():
-    if not os.path.exists(SYNC_LOG_PATH):
-        return True  # No sync ever done, prompt user
-
-    with open(SYNC_LOG_PATH, "r") as f:
-        line = f.readline().strip()
-
-    if not line.startswith("last_sync:"):
-        print("Sync log error: invalid format")
-        return True
-
-    try:
-        last_sync_str = line.split("last_sync:")[1]
-        last_sync_time = datetime.strptime(last_sync_str, "%Y-%m-%d %H:%M:%S.%f")
-        if datetime.now() - last_sync_time > timedelta(minutes=30):
-            return True
-    except Exception as e:
-        print("Sync log error:", e)
-        return True  # Assume prompt if something's off
-
-    return False
-
-def delayed_sync_prompt():
-    if should_prompt_sync():
-        global service
-        if messagebox.askyesno("Sync Reminder", "You haven’t synced in a while. Would you like to sync now?"):
-            main_api()
-#root.after(5000, delayed_sync_prompt)  
-
 ##############
 
 def sync_upload_file(service, local_file_path, parent_folder_id, progress_queue):
@@ -625,11 +507,13 @@ def list_drive_files(service, folder_id):
     query = f"'{folder_id}' in parents and trashed = false"
     fields = "files(id, name, modifiedTime)"
     results = service.files().list(q=query, fields=fields).execute()
+    print(results)
     return results.get('files', [])
+    
 
 
 def get_local_modified_time(filepath):
-    return datetime.utcfromtimestamp(os.path.getmtime(filepath)).replace(tzinfo=timezone.utc)
+    return datetime.fromtimestamp(os.path.getmtime(filepath), tz=timezone.utc)
 
 def sync_now_to_drive():
     progress_queue = queue.Queue()  # Create the queue here
@@ -643,7 +527,11 @@ def sync_now_to_drive():
         drive_files = list_drive_files(service, drive_folder_id)
         drive_file_map = {f["name"]: f for f in drive_files}
 
-        for root_dir, _, files in os.walk(folder_path):
+        for root_dir, dirs, files in os.walk(folder_path):
+            if root_dir != folder_path:
+                print(f"⏭️ Skipped folder: {root_dir}\n")
+                continue  # Skip subdirectories
+
             for filename in files:
                 local_path = os.path.join(root_dir, filename)
                 local_time = get_local_modified_time(local_path)
@@ -655,8 +543,12 @@ def sync_now_to_drive():
                         print(f"🔼 Local newer → Uploading {filename}")
                         sync_upload_file(service, local_path, drive_folder_id, progress_queue)
                     elif drive_time > local_time:
-                        print(f"🔽 Drive newer → Downloading {filename}")
-                        sync_download_files(service, drive_folder_id, local_path, progress_queue)
+                        file_id = drive_file["id"]
+                        downloaded = sync_download_files(service, file_id, local_path, progress_queue)
+                        if downloaded:
+                            print(f"🔽 Drive newer → Downloaded {filename}")
+                        else:
+                            print(f"✅ Up-to-date: {filename} (no download needed)")
                     else:
                         print(f"✅ Up-to-date: {filename}")
                 else:
@@ -676,49 +568,13 @@ def sync_now_to_drive():
 
 ######
 
-def main_api():
-    def threaded_upload(service, folder_path, progress_queue):
-        upload_folder_files(service, folder_path, progress_queue)
-
-    def threaded_download(service, folder_path, progress_bar):
-        DownloadButton.config(state="disabled")
-        progress_queue = queue.Queue()
-
-        def worker():
-            download_latest_sync_folder(service, folder_path, progress_queue)
-
-        def monitor():
-            try:
-                while True:
-                    result = progress_queue.get_nowait()
-                    if result == "done":
-                        messagebox.showinfo("Download Complete", "Files successfully downloaded from Google Drive!")
-                        break
-                    elif isinstance(result, str) and result.startswith("error:"):
-                        messagebox.showerror("Download Failed", result.split("error:")[1])
-                        break
-                    elif isinstance(result, tuple):
-                        current, total = result
-                        progress_bar['maximum'] = total
-                        progress_bar['value'] = current
-                        progress_bar.update_idletasks()
-            except queue.Empty:
-                Upload_Option.after(100, monitor)  # Keep checking
-
-        threading.Thread(target=worker, daemon=True).start()
-        monitor()
-        DownloadButton.config(state="normal")
-
-
-    def download():
-        download_latest_sync_folder(service, folder_path, progress_queue)
-
+# For progress bar referance 
+'''
     def check_queue():
         try:
             while True:
                 msg = progress_queue.get_nowait()
                 if msg == "done":
-                    UploadButton.config(state="normal")
                     messagebox.showinfo("Upload Completed",f"Your Files have been synced ")
                     save_last_sync_time()
                     return
@@ -728,11 +584,16 @@ def main_api():
                     progress_bar['value'] = current
                 elif isinstance(msg, str) and msg.startswith("error:"):
                     messagebox.showerror("Error", msg.split(":", 1)[1])
-                    UploadButton.config(state="normal")
                     return
         except queue.Empty:
             pass
         Upload_Option.after(100, check_queue)
+        
+'''
+
+
+def main_api():
+
 
     def show_files():
         global service
@@ -756,16 +617,12 @@ def main_api():
     progress_bar = ttk.Progressbar(Upload_Option, orient='horizontal', length=300, mode='determinate')
     progress_bar.pack(pady=10)
 
-    progress_queue = queue.Queue()
 
     def open_drive():
         webbrowser.open("https://drive.google.com/drive/my-drive")
 
     ReloadButton = ttk.Button(Upload_Option, text="Reload Files", command=show_files)
     ReloadButton.pack(pady=10)
-
-    UploadButton = ttk.Button(Upload_Option, text="Upload File", command=lambda: (UploadButton.config(state="disabled"), threading.Thread(target=threaded_upload, args=(service, r"C:\Notes", progress_queue), daemon=True).start(), check_queue()))
-    UploadButton.pack(pady=10)
 
     Todrivebutton = ttk.Button(Upload_Option, text="Go to Google Drive", command=open_drive)
     Todrivebutton.pack(pady=10)
@@ -784,7 +641,6 @@ def main_api():
     def on_closing():
         if messagebox.askyesno("Sign Out", "Are you sure you want to sign out?"):
             logout()
-            UploadButton.config(state="disabled")
             LogOutButton.config(state="disabled")
             messagebox.showinfo("Goodbye", "You have been signed out. You will need to sign in again next time.")
             Upload_Option.destroy()
@@ -795,11 +651,8 @@ def main_api():
     LogOutButton = ttk.Button(Upload_Option, text="Log Out", command=on_closing)
     LogOutButton.pack(pady=10)
 
-    DownloadButton = ttk.Button(Upload_Option, text="Download from Drive", command=lambda: threaded_download(service, r"C:\Notes", progress_bar))    
-    DownloadButton.pack(pady=10)# Adjust as needed
 
     show_files()
-    UploadButton.config(state="normal")
     LogOutButton.config(state="normal")
 
 
