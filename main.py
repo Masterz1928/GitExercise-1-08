@@ -421,12 +421,15 @@ update_file_list()
 import mimetypes
 import webbrowser
 import pickle
+import json
 
 # Defines permission 
 # metadata - view file names adn metadata 
 #drive.file uploading files 
 SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.file"]
 auth_window = None  
+SYNC_META_PATH = r"C:\Notes\.syncmeta.json"
+LOCAL_FOLDER_PATH = r"C:\Notes"
 
 
 def authenticate():
@@ -464,62 +467,101 @@ def get_or_create_main_folder(service):
 
 ##############
 
-def sync_upload_file(service, local_file_path, parent_folder_id, progress_queue):
+def sync_upload_file(service, local_file_path, parent_folder_id, existing_drive_id=None):
     try:
         filename = os.path.basename(local_file_path)
-        file_metadata = {'name': filename, 'parents': [parent_folder_id]}
         media = MediaFileUpload(local_file_path, resumable=True)
-        response = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        if existing_drive_id:
+            # Update existing file
+            response = service.files().update(
+                fileId=existing_drive_id,
+                media_body=media,
+                fields='id, modifiedTime'
+            ).execute()
+        else:
+            # Create new file
+            file_metadata = {'name': filename, 'parents': [parent_folder_id]}
+            response = service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id, modifiedTime'
+            ).execute()
         print(f"Uploaded {filename} with file ID: {response.get('id')}")
-        progress_queue.put("done")
+        return {
+            "drive_id": response.get("id"),
+            "drive_modified": response.get("modifiedTime"),
+            "local_modified": datetime.fromtimestamp(os.path.getmtime(local_file_path), tz=timezone.utc).isoformat()
+        }
     except Exception as e:
-        progress_queue.put(f"error:{str(e)}")
-    finally:
-        progress_queue.put("done")
+        print(f"error:{str(e)}")
 
-def sync_download_files(service, parent_folder_id, local_folder_path, progress_queue):
+
+
+def sync_download_files(service, file_id, local_file_path):
     try:
-        query = f"'{parent_folder_id}' in parents and trashed=false"
-        results = service.files().list(q=query, fields="files(id, name)").execute()
-        files = results.get('files', [])
-        total = len(files)
-        if total == 0:
-            progress_queue.put("error:No files to download")
-            return
-        os.makedirs(local_folder_path, exist_ok=True)
-        for i, file in enumerate(files, start=1):
-            file_id = file['id']
-            file_name = file['name']
-            request = service.files().get_media(fileId=file_id)
-            with open(os.path.join(local_folder_path, file_name), 'wb') as f:
-                downloader = MediaIoBaseDownload(f, request)
-                done = False
-                while not done:
-                    status, done = downloader.next_chunk()
-            progress_queue.put((i, total))
+        request = service.files().get_media(fileId=file_id)
+        os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
+        with open(local_file_path, 'wb') as f:
+            downloader = MediaIoBaseDownload(f, request)
+            done = False
+            while not done:
+                status, done = downloader.next_chunk()
+            drive_file = service.files().get(fileId=file_id, fields='modifiedTime').execute()
+        drive_mod_time_str = drive_file['modifiedTime']
+        drive_mod_time = parser.parse(drive_mod_time_str)
+        mod_timestamp = drive_mod_time.timestamp()
+        os.utime(local_file_path, (mod_timestamp, mod_timestamp))
+        return {
+            "drive_id": file_id,
+            "drive_modified": drive_mod_time_str,
+            "local_modified": drive_mod_time.isoformat()
+    }
     except Exception as e:
-        progress_queue.put(f"error:{str(e)}")
-    finally:
-        progress_queue.put("done")
+        print(f"error:{str(e)}")
 
 
 def list_drive_files(service, folder_id):
     query = f"'{folder_id}' in parents and trashed = false"
     fields = "files(id, name, modifiedTime)"
     results = service.files().list(q=query, fields=fields).execute()
-    print(results)
     return results.get('files', [])
-    
 
+# ---------- Sync meta (local cache) ----------
+
+def load_sync_meta():
+    if os.path.exists(SYNC_META_PATH):
+        try:
+            with open(SYNC_META_PATH, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if not content:
+                    return {}
+                return json.loads(content)
+        except json.JSONDecodeError:
+            print("⚠️ Warning: .syncmeta.json is corrupted or invalid. Resetting.")
+            return {}
+    return {}
+
+def save_sync_meta(meta):
+    with open(SYNC_META_PATH, "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=4)
 
 def get_local_modified_time(filepath):
     return datetime.fromtimestamp(os.path.getmtime(filepath), tz=timezone.utc)
 
+
+def timestamps_close(t1, t2, tolerance_seconds=2):
+    delta = abs((t1 - t2).total_seconds())
+    return delta <= tolerance_seconds
+
+# ---------- Main sync function ----------
+ 
 def sync_now_to_drive():
-    progress_queue = queue.Queue()  # Create the queue here
+    sync_meta = load_sync_meta()  # Load existing metadata
+    updated_meta = {}
+
     try:
         print("🔄 2-Way Sync started...")
-        folder_path = r"C:\Notes"
+        folder_path = LOCAL_FOLDER_PATH
 
         service = authenticate()
         drive_folder_id = get_or_create_main_folder(service)
@@ -529,67 +571,65 @@ def sync_now_to_drive():
 
         for root_dir, dirs, files in os.walk(folder_path):
             if root_dir != folder_path:
-                print(f"⏭️ Skipped folder: {root_dir}\n")
+                print(f"⏭️ Skipped folder: {root_dir}")
                 continue  # Skip subdirectories
 
             for filename in files:
-                local_path = os.path.join(root_dir, filename)
+                if filename == ".syncmeta.json":
+                    continue
+
+                local_path = os.path.join(folder_path, filename)
                 local_time = get_local_modified_time(local_path)
                 drive_file = drive_file_map.get(filename)
+                
+                prev_entry = sync_meta.get(filename, {})
+                prev_local_time = parser.parse(prev_entry.get("local_modified")) if prev_entry.get("local_modified") else None
+                prev_drive_time = parser.parse(prev_entry.get("drive_modified")) if prev_entry.get("drive_modified") else None
 
                 if drive_file:
+                    drive_id = drive_file["id"]
                     drive_time = parser.parse(drive_file["modifiedTime"])
-                    if local_time > drive_time:
+
+                    if local_time > drive_time and not timestamps_close(local_time, drive_time):                        
                         print(f"🔼 Local newer → Uploading {filename}")
-                        sync_upload_file(service, local_path, drive_folder_id, progress_queue)
-                    elif drive_time > local_time:
-                        file_id = drive_file["id"]
-                        downloaded = sync_download_files(service, file_id, local_path, progress_queue)
-                        if downloaded:
-                            print(f"🔽 Drive newer → Downloaded {filename}")
-                        else:
-                            print(f"✅ Up-to-date: {filename} (no download needed)")
+                        result = sync_upload_file(service, local_path, drive_folder_id, existing_drive_id=drive_id)
+                        updated_meta[filename] = result
+
+                    elif drive_time > local_time and not timestamps_close(drive_time, local_time):
+                        print(f"🔽 Drive newer → Downloading {filename}")
+                        result = sync_download_files(service, drive_id, local_path)
+                        updated_meta[filename] = result
+
                     else:
                         print(f"✅ Up-to-date: {filename}")
+                        updated_meta[filename] = {
+                            "local_modified": local_time.isoformat(),
+                            "drive_modified": drive_time.isoformat(),
+                            "drive_id": drive_id
+                        }
+
                 else:
                     print(f"🔼 Only on PC → Uploading {filename}")
-                    sync_upload_file(service, local_path, drive_folder_id, progress_queue)
+                    result = sync_upload_file(service, local_path, drive_folder_id)
+                    updated_meta[filename] = result
 
-        # Handle files on Drive but not locally
+        # Handle files that only exist on Drive
         for drive_file in drive_files:
-            local_file_path = os.path.join(folder_path, drive_file["name"])
-            if not os.path.exists(local_file_path):
-                print(f"🔽 Only on Drive → Downloading {drive_file['name']}")
-                sync_download_files(service, drive_file["id"], local_file_path, progress_queue)
+            filename = drive_file["name"]
+            local_file_path = os.path.join(folder_path, filename)
 
+            if not os.path.exists(local_file_path):
+                print(f"🔽 Only on Drive → Downloading {filename}")
+                result = sync_download_files(service, drive_file["id"], local_file_path)
+                updated_meta[filename] = result
+
+        save_sync_meta(updated_meta)
         print("✅ 2-Way Sync complete!")
+
     except Exception as e:
         print("❌ Sync failed:", e)
 
 ######
-
-# For progress bar referance 
-'''
-    def check_queue():
-        try:
-            while True:
-                msg = progress_queue.get_nowait()
-                if msg == "done":
-                    messagebox.showinfo("Upload Completed",f"Your Files have been synced ")
-                    save_last_sync_time()
-                    return
-                elif isinstance(msg, tuple):
-                    current, total = msg
-                    progress_bar['maximum'] = total
-                    progress_bar['value'] = current
-                elif isinstance(msg, str) and msg.startswith("error:"):
-                    messagebox.showerror("Error", msg.split(":", 1)[1])
-                    return
-        except queue.Empty:
-            pass
-        Upload_Option.after(100, check_queue)
-        
-'''
 
 
 def main_api():
@@ -677,9 +717,6 @@ def finish_auth(callback):
         auth_window.destroy()
         auth_window = None
     callback()
-
-
-
 
 #################################################################################################################################################
 
