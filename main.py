@@ -467,33 +467,31 @@ def get_or_create_main_folder(service):
 
 ##############
 
-def sync_upload_file(service, local_file_path, parent_folder_id, existing_drive_id=None):
-    try:
-        filename = os.path.basename(local_file_path)
-        media = MediaFileUpload(local_file_path, resumable=True)
-        if existing_drive_id:
-            # Update existing file
-            response = service.files().update(
-                fileId=existing_drive_id,
-                media_body=media,
-                fields='id, modifiedTime'
-            ).execute()
-        else:
-            # Create new file
-            file_metadata = {'name': filename, 'parents': [parent_folder_id]}
-            response = service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id, modifiedTime'
-            ).execute()
-        print(f"Uploaded {filename} with file ID: {response.get('id')}")
-        return {
-            "drive_id": response.get("id"),
-            "drive_modified": response.get("modifiedTime"),
-            "local_modified": datetime.fromtimestamp(os.path.getmtime(local_file_path), tz=timezone.utc).isoformat()
-        }
-    except Exception as e:
-        print(f"error:{str(e)}")
+def sync_upload_file(service, file_path, folder_id, existing_drive_id=None):
+    file_name = os.path.basename(file_path)
+    file_metadata = {"name": file_name, "parents": [folder_id]}
+    media = MediaFileUpload(file_path, resumable=True)
+
+    if existing_drive_id:
+        uploaded_file = service.files().update(
+            fileId=existing_drive_id,
+            media_body=media
+        ).execute()
+    else:
+        uploaded_file = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields="id, modifiedTime"
+        ).execute()
+
+    # 🔁 Make sure to fetch the updated modifiedTime
+    updated_file = service.files().get(fileId=uploaded_file["id"], fields="id, modifiedTime").execute()
+
+    return {
+        "local_modified": get_local_modified_time(file_path).isoformat(),
+        "drive_modified": updated_file["modifiedTime"],
+        "drive_id": updated_file["id"]
+    }
 
 
 
@@ -592,8 +590,12 @@ def sync_now_to_drive():
 
                     if local_time > drive_time and not timestamps_close(local_time, drive_time):                        
                         print(f"🔼 Local newer → Uploading {filename}")
-                        result = sync_upload_file(service, local_path, drive_folder_id, existing_drive_id=drive_id)
-                        updated_meta[filename] = result
+                        uploaded = sync_upload_file(service, local_path, drive_folder_id, existing_drive_id=drive_id)
+                        updated_meta[filename] = {
+                            "local_modified": local_time.isoformat(),
+                            "drive_modified": uploaded["drive_modified"],                            
+                            "drive_id": uploaded["drive_id"]
+    }
 
                     elif drive_time > local_time and not timestamps_close(drive_time, local_time):
                         print(f"🔽 Drive newer → Downloading {filename}")
@@ -610,8 +612,12 @@ def sync_now_to_drive():
 
                 else:
                     print(f"🔼 Only on PC → Uploading {filename}")
-                    result = sync_upload_file(service, local_path, drive_folder_id)
-                    updated_meta[filename] = result
+                    uploaded = sync_upload_file(service, local_path, drive_folder_id)
+                    updated_meta[filename] = {
+                        "local_modified": local_time.isoformat(),
+                        "drive_modified": uploaded["drive_modified"],
+                        "drive_id": uploaded["drive_id"]
+    }
 
         # Handle files that only exist on Drive
         for drive_file in drive_files:
