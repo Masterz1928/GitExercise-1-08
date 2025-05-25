@@ -167,7 +167,7 @@ def create_feature_card(parent, icon, title, desc, tab_index):
     icon_label.pack(pady=(10, 0))
 
     title_label = tk.Label(card, text=title, font=("Segoe UI", 13, "bold"), bg=BLUE_ACCENT, fg=TEXT_COLOR)
-    title_label.pack(pady=(5, 0))
+    title_label.pack(pady=(5, 5))
 
     desc_label = tk.Label(card, text=desc, font=("Segoe UI", 10), bg=BLUE_ACCENT, fg=TEXT_COLOR, wraplength=180,
                           justify="center")
@@ -526,7 +526,7 @@ btn_delete.pack(side='left', padx=5)
 btn_export = ttk.Button(note_btn_frame, text="Export Notes", command=lambda: export_notes_with_format())
 btn_export.pack(side='left', padx=5)
 
-btn_drive = tk.Button(note_btn_frame, text="Open Drive", command=open_drive_panel)
+btn_drive = ttk.Button(note_btn_frame, text="Open Drive", command=open_drive_panel)
 btn_drive.pack(side="left", padx=5)
 
 listbox_menu = tk.Menu(card_frame, tearoff=0)# tear off is the dash line in the menu list
