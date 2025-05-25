@@ -29,49 +29,24 @@ os.makedirs(trash_folder, exist_ok=True)
 
 #main page code
 root = tk.Tk()
-root.title("🎓 MMU Study Buddy")
+root.title("MMU Study Buddy")
 root.geometry("900x600")
 root.configure(bg=WHITE_BG)
 root.minsize(700, 500)
+
+icon = tk.PhotoImage(file=r"C:\Users\ASUS\project\pythonfile\Mini_IT_Project-1-08\025.png")  # Use a PNG file
+root.iconphoto(False, icon)
 
 top_frame = tk.Frame(root, bg=BLUE_BG, height=60)  # Use new blue background
 top_frame.pack(fill='x')
 
 logo_label = tk.Label(top_frame,
-                      text="📘 MMU Study Buddy",  # Changed to a blue-themed emoji
+                      text="📘 MMU Study Buddy",  
                       font=FONT_LOGO,
                       bg=BLUE_BG,
-                      fg=LOGO_COLOR,             # Royal Blue text
+                      fg=LOGO_COLOR,         
                       anchor='w')
 logo_label.pack(side='left', padx=20, pady=10)
-
-def open_drive_panel():
-    drive_window = tk.Toplevel()
-    drive_window.title("Drive Panel")
-    drive_window.resizable(False, False)
-
-    # Dimensions and position (top-right)
-    window_width = 300
-    window_height = 320
-    screen_width = drive_window.winfo_screenwidth()
-    x_position = screen_width - window_width - 10
-    y_position = 10
-    drive_window.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
-    drive_window.configure(bg="#f0f0f0")
-
-    # Button style
-    button_style = {"font": ("Arial", 10, "bold"), "bg": "#4caf50", "fg": "white", "relief": "raised", "bd": 2}
-
-    # Buttons
-    tk.Button(drive_window, text="Download", **button_style).pack(pady=10, ipadx=10, ipady=5)
-    tk.Button(drive_window, text="Upload", **button_style).pack(pady=10, ipadx=10, ipady=5)
-    tk.Button(drive_window, text="Go to Drive", **button_style).pack(pady=10, ipadx=10, ipady=5)
-    tk.Button(drive_window, text="Reload", **button_style).pack(pady=10, ipadx=10, ipady=5)
-    tk.Button(drive_window, text="Log Out", bg="#f44336", fg="white", font=("Arial", 10, "bold"), relief="raised", bd=2).pack(pady=10, ipadx=10, ipady=5)
-
-
-btn_drive = tk.Button(top_frame, text="Drive", command=open_drive_panel)
-btn_drive.pack(side="right", padx=10)
 
 #notebook tab style
 style = ttk.Style()
@@ -119,7 +94,7 @@ def get_greeting():
         return "🌙 Good Night!"
 
 
-def fade_in(widget, delay=30, steps=10):
+def fade_in(widget, delay=250, steps=10):
     colors = [
         "#CCCCCC", "#BBBBBB", "#AAAAAA", "#999999", "#888888",
         "#777777", "#666666", "#444444", "#222222", "#000000"
@@ -453,7 +428,58 @@ def open_trash_bin():
 
     btn_delete_all = ttk.Button(trash_win, text="Clear", command=delete_all_files)
     btn_delete_all.pack(side='right', padx=(20,100), pady=10)
-# ------------------- Notes Tab -------------------
+
+def open_drive_panel():
+    drive_window = tk.Toplevel()
+    drive_window.title("Drive Panel")
+    drive_window.resizable(False, False)
+    drive_window.configure(bg="#f0f0f0")
+
+    # Title Label
+    tk.Label(
+        drive_window,
+        text="📁 Drive Control Panel",
+        font=("Helvetica", 14, "bold"),
+        bg="#f0f0f0",
+        fg="#000000"
+    ).pack(pady=(15, 10))
+
+    # Frame for buttons
+    button_frame = tk.Frame(drive_window, bg="#f0f0f0")
+    button_frame.pack(pady=10)
+
+    # Common button style
+    def create_button(text):
+        return tk.Button(
+            button_frame,
+            text=text,
+            font=("Arial", 10, "bold"),
+            bg="#e0e0e0",    # light gray background
+            fg="#000000",    # black text
+            relief="raised",
+            bd=2,
+            width=20,
+            height=2
+        )
+
+    # Buttons
+    create_button("⬇️ Download").pack(pady=5)
+    create_button("⬆️ Upload").pack(pady=5)
+    create_button("🌐 Go to Drive").pack(pady=5)
+    create_button("🔄 Reload").pack(pady=5)
+    create_button("🚪 Log Out").pack(pady=5)
+
+    # Footer
+    tk.Label(
+        drive_window,
+        text="Connected to Google Drive",
+        font=("Arial", 9, "italic"),
+        bg="#f0f0f0",
+        fg="#555555"
+    ).pack(pady=(15, 10))
+
+
+#note tab
 notes_tab = tk.Frame(notebook, bg=WHITE_BG)
 notebook.add(notes_tab, text="📝 Notes")
 
@@ -499,6 +525,9 @@ btn_delete.pack(side='left', padx=5)
 
 btn_export = ttk.Button(note_btn_frame, text="Export Notes", command=lambda: export_notes_with_format())
 btn_export.pack(side='left', padx=5)
+
+btn_drive = tk.Button(note_btn_frame, text="Open Drive", command=open_drive_panel)
+btn_drive.pack(side="left", padx=5)
 
 listbox_menu = tk.Menu(card_frame, tearoff=0)# tear off is the dash line in the menu list
 listbox_menu.add_command(label="Pin", command=lambda: pin_selected_note())
@@ -584,9 +613,13 @@ def load_remarks():
                     remarks[date] = remark
 
 def save_remarks():
-    with open("remarks.txt", "w") as f:
-        for date, remark in remarks.items():
-            f.write(f"{date}|{remark}\n")
+    try:
+        with open("remarks.txt", "a") as f:
+            for date, remark in remarks.items():
+                f.write(f"{date}|{remark}\n")
+    except FileNotFoundError:
+        print("error")
+
 
 # Save remark for selected date
 def save_remark_for_date():
