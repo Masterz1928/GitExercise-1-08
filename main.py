@@ -118,7 +118,7 @@ fade_in(greeting_label)
 def get_pinned_notes_from_txt():
     notes = []
     try:
-        with open("pinned_notes.txt", "r", encoding="utf-8") as file:
+        with open("C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/pinned_notes.txt", "r", encoding="utf-8") as file:
             for line in file:
                 filename = line.strip()
                 if filename:
@@ -357,15 +357,15 @@ def unpin_from_tree():
         messagebox.showinfo("Remind", "Please select a pinned note first.")
 
 def save_pinned_notes():
-    with open("pinned_notes.txt", "w") as f:
+    with open("C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/pinned_notes.txt", "w") as f:
         for item in tree.get_children():
             filename = tree.item(item, "values")[0]
             f.write(f"{filename}\n")
 
 
 def load_pinned_notes():
-    if os.path.exists("pinned_notes.txt"):
-        with open("pinned_notes.txt", "r") as f:
+    if os.path.exists("C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/pinned_notes.txt"):
+        with open("C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/pinned_notes.txt", "r") as f:
             for line in f:
                 note = line.strip()
                 pinned_files.append(note)
@@ -605,8 +605,8 @@ def apply_theme(choice):
 
 # Save/load remarks
 def load_remarks():
-    if os.path.exists("remarks.txt"):
-        with open("remarks.txt", "r") as f:
+    if os.path.exists("C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/remarks.txt"):
+        with open("C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/remarks.txt", "r") as f:
             for line in f:
                 if "|" in line:
                     date, remark = line.strip().split("|", 1)
@@ -614,7 +614,7 @@ def load_remarks():
 
 def save_remarks():
     try:
-        with open("remarks.txt", "a") as f:
+        with open("C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/remarks.txt", "a") as f:
             for date, remark in remarks.items():
                 f.write(f"{date}|{remark}\n")
     except FileNotFoundError:
