@@ -26,6 +26,7 @@ pinned_files = []
 folder_path = "C:/Notes"
 trash_folder = os.path.join(folder_path, "Trash")
 os.makedirs(trash_folder, exist_ok=True)
+remark_path= "C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/remarks.txt" 
 
 #main page code
 root = tk.Tk()
@@ -81,6 +82,28 @@ home_title = tk.Label(home,
                       fg=TEXT_COLOR)
 home_title.pack(pady=20)
 
+def check_reminders_on_startup():
+    now = datetime.datetime.now()
+    due_reminders = []
+
+    for date_str, remark in remarks.items():
+        try:
+            # Try full datetime first
+            reminder_time = datetime.datetime.strptime(date_str, "%Y-%m-%d %H:%M")
+        except ValueError:
+            try:
+                # If no time part, parse date only, assume midnight
+                reminder_time = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+            except ValueError:
+                print(f"Invalid date format: {date_str}")
+                continue
+        
+        if now <= reminder_time :
+            due_reminders.append(f"{date_str} → {remark}")
+
+    if due_reminders:
+        message = "\n\n".join(due_reminders)
+        messagebox.showinfo("Due Reminders", message)
 
 def get_greeting():
     current_hour = datetime.datetime.now().hour
@@ -497,7 +520,7 @@ btn_trash.place(relx=0.8, rely=0.05, relwidth=0.15)
 search_entry.bind("<KeyRelease>", lambda e: search_notes())
 
 # Listbox for files
-file_listbox = tk.Listbox(notes_tab, font=FONT_TEXT)
+file_listbox = tk.Listbox(notes_tab, font=FONT_TEXT,bg="white")
 file_listbox.place(relx=0.05, rely=0.12, relwidth=0.4, relheight=0.8)
 
 # Button Frame
@@ -605,8 +628,8 @@ def apply_theme(choice):
 
 # Save/load remarks
 def load_remarks():
-    if os.path.exists("C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/remarks.txt"):
-        with open("C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/remarks.txt", "r") as f:
+    if os.path.exists(remark_path):
+        with open(remark_path, "r") as f:
             for line in f:
                 if "|" in line:
                     date, remark = line.strip().split("|", 1)
@@ -614,7 +637,7 @@ def load_remarks():
 
 def save_remarks():
     try:
-        with open("C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/remarks.txt", "a") as f:
+        with open(remark_path, "w") as f:
             for date, remark in remarks.items():
                 f.write(f"{date}|{remark}\n")
     except FileNotFoundError:
@@ -700,5 +723,5 @@ card4.grid(row=0, column=3, padx=15, pady=15)
 populate_pinned_preview(pinned_preview_frame)
 
 update_file_list()
-
+check_reminders_on_startup()
 root.mainloop()
