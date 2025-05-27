@@ -554,13 +554,13 @@ def timestamps_close(t1, t2, tolerance_seconds=2):
 # ---------- Main sync function ----------
  
 def sync_now_to_drive():
-    sync_meta = load_sync_meta()  # Load existing metadata
+    sync_meta = load_sync_meta()
     updated_meta = {}
+    all_synced = True  # Assume everything is synced unless proven otherwise
 
     try:
         print("🔄 2-Way Sync started...")
         folder_path = LOCAL_FOLDER_PATH
-
         service = authenticate()
         drive_folder_id = get_or_create_main_folder(service)
 
@@ -570,7 +570,7 @@ def sync_now_to_drive():
         for root_dir, dirs, files in os.walk(folder_path):
             if root_dir != folder_path:
                 print(f"⏭️ Skipped folder: {root_dir}")
-                continue  # Skip subdirectories
+                continue
 
             for filename in files:
                 if filename == ".syncmeta.json":
@@ -588,22 +588,25 @@ def sync_now_to_drive():
                     drive_id = drive_file["id"]
                     drive_time = parser.parse(drive_file["modifiedTime"])
 
-                    if local_time > drive_time and not timestamps_close(local_time, drive_time):                        
+                    if local_time > drive_time and not timestamps_close(local_time, drive_time):
                         print(f"🔼 Local newer → Uploading {filename}")
+                        all_synced = False
                         uploaded = sync_upload_file(service, local_path, drive_folder_id, existing_drive_id=drive_id)
                         updated_meta[filename] = {
                             "local_modified": local_time.isoformat(),
-                            "drive_modified": uploaded["drive_modified"],                            
+                            "drive_modified": uploaded["drive_modified"],
                             "drive_id": uploaded["drive_id"]
-    }
+                        }
 
                     elif drive_time > local_time and not timestamps_close(drive_time, local_time):
                         print(f"🔽 Drive newer → Downloading {filename}")
+                        all_synced = False
                         result = sync_download_files(service, drive_id, local_path)
                         updated_meta[filename] = result
 
                     else:
                         print(f"✅ Up-to-date: {filename}")
+                        # Leave `all_synced` unchanged here to avoid false positive
                         updated_meta[filename] = {
                             "local_modified": local_time.isoformat(),
                             "drive_modified": drive_time.isoformat(),
@@ -612,31 +615,47 @@ def sync_now_to_drive():
 
                 else:
                     print(f"🔼 Only on PC → Uploading {filename}")
+                    all_synced = False
                     uploaded = sync_upload_file(service, local_path, drive_folder_id)
                     updated_meta[filename] = {
                         "local_modified": local_time.isoformat(),
                         "drive_modified": uploaded["drive_modified"],
                         "drive_id": uploaded["drive_id"]
-    }
+                    }
 
-        # Handle files that only exist on Drive
+        # Handle files only on Drive
         for drive_file in drive_files:
             filename = drive_file["name"]
             local_file_path = os.path.join(folder_path, filename)
-
             if not os.path.exists(local_file_path):
                 print(f"🔽 Only on Drive → Downloading {filename}")
+                all_synced = False
                 result = sync_download_files(service, drive_file["id"], local_file_path)
                 updated_meta[filename] = result
 
         save_sync_meta(updated_meta)
         print("✅ 2-Way Sync complete!")
+        return all_synced
 
     except Exception as e:
         print("❌ Sync failed:", e)
+        return True  # Fail safe: exit loop on error
+
+def sync_till_up_to_date():
+    print("I am till all file is up to date")
+    while True:
+        SyncStatus = sync_now_to_drive()
+        if SyncStatus:
+            break
+    
+    print("✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅")
+    messagebox.showinfo("Sync Completed", "All Files Have Been Synced")
+
 
 ######
 
+auto_sync_enabled = True
+auto_sync_timer = None
 
 def main_api():
 
@@ -667,14 +686,76 @@ def main_api():
     def open_drive():
         webbrowser.open("https://drive.google.com/drive/my-drive")
 
+
+    SYNC_OPTIONS = {
+    "Off": 0,
+    "Every 30 sec": 30,
+    "Every 10 min": 600,
+    "Every 30 min": 1800,
+    "Every 1 hour": 3600
+    }
+
+    sync_interval_var = tk.StringVar(value="Every 10 min")  # Default
+
+
+    def start_auto_sync():
+        global auto_sync_timer
+
+        interval_label = sync_interval_var.get()
+        interval_seconds = SYNC_OPTIONS.get(interval_label, 0)
+
+        if interval_seconds == 0:
+            print("⛔ Auto-sync is OFF.")
+            return
+
+        if auto_sync_enabled:
+            print(f"⏳ Scheduled next auto-sync in {interval_seconds} seconds...")
+            auto_sync_timer = threading.Timer(interval_seconds, run_auto_sync)
+            auto_sync_timer.start()
+
+
+    def run_auto_sync():
+        try:
+            print("🔄 Auto-Sync triggered...")
+            sync_till_up_to_date() 
+        finally:
+            start_auto_sync()
+
+
+    from tkinter import BooleanVar, Checkbutton
+
+    auto_sync_enabled_var = BooleanVar(value=True)
+
+    def toggle_auto_sync():
+        global auto_sync_enabled, auto_sync_timer
+        auto_sync_enabled = auto_sync_enabled_var.get()
+        if auto_sync_enabled:
+            SyncTiming.config(state="normal")
+            start_auto_sync()
+            print("▶️ Auto-Sync Enabled")
+        else:
+            SyncTiming.config(state="disabled")  # Disable dropdown            
+            if auto_sync_timer:
+                auto_sync_timer.cancel()
+            print("⏸️ Auto-Sync Paused")
+
+
     ReloadButton = ttk.Button(Upload_Option, text="Reload Files", command=show_files)
     ReloadButton.pack(pady=10)
 
     Todrivebutton = ttk.Button(Upload_Option, text="Go to Google Drive", command=open_drive)
     Todrivebutton.pack(pady=10)
 
-    syncNowWille = ttk.Button(Upload_Option, text="Sync now", command=sync_now_to_drive)
+    syncNowWille = ttk.Button(Upload_Option, text="Sync now", command=sync_till_up_to_date)
     syncNowWille.pack(pady=10)
+
+    # Interval dropdown
+    SyncTiming = ttk.OptionMenu(Upload_Option, sync_interval_var, *SYNC_OPTIONS.keys())
+    SyncTiming.pack()
+
+    # Enable/disable checkbox
+    SyncAuto = tk.Checkbutton(Upload_Option, text="Auto-Sync", variable=auto_sync_enabled_var, command=toggle_auto_sync)
+    SyncAuto.pack()
 
     def logout():
         global service
