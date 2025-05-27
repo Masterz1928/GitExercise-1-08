@@ -540,8 +540,13 @@ def load_sync_meta():
     return {}
 
 def save_sync_meta(meta):
-    with open(SYNC_META_PATH, "w", encoding="utf-8") as f:
-        json.dump(meta, f, indent=4)
+    print(f"Saving sync meta to: {SYNC_META_PATH}")
+    try:
+        with open(SYNC_META_PATH, "w", encoding="utf-8") as f:
+            json.dump(meta, f, indent=4)
+        print("Updated into json")
+    except Exception as e:
+        print("Failed to save sync meta:", e)
 
 def get_local_modified_time(filepath):
     return datetime.fromtimestamp(os.path.getmtime(filepath), tz=timezone.utc)
@@ -633,7 +638,9 @@ def sync_now_to_drive():
                 result = sync_download_files(service, drive_file["id"], local_file_path)
                 updated_meta[filename] = result
 
+        print("Updated meta content before saving:", updated_meta)
         save_sync_meta(updated_meta)
+
         print("✅ 2-Way Sync complete!")
         return all_synced
 
