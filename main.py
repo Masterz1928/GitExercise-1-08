@@ -45,6 +45,31 @@ main_label.pack()
 timeinput_frame =tk.LabelFrame(root)
 timeinput_frame.pack(pady=10)
 
+preset_frame = tk.Frame(root)
+preset_frame.pack(pady=10)
+
+def set_preset_time(h, m, s):
+    hours.set(f"{h:02}")
+    mins.set(f"{m:02}")
+    secs.set(f"{s:02}")
+
+#Create preset buttons
+preset_5min = tk.Button(preset_frame, text="5 mins")
+preset_5min.config(command=lambda: set_preset_time(0, 5, 0))
+preset_5min.pack(side=tk.LEFT, padx=5)
+
+preset_10min = tk.Button(preset_frame, text="10 mins")
+preset_10min.config(command=lambda: set_preset_time(0, 10, 0))
+preset_10min.pack(side=tk.LEFT, padx=5)
+
+preset_25min = tk.Button(preset_frame, text="25 mins")
+preset_25min.config(command=lambda: set_preset_time(0, 25, 0))
+preset_25min.pack(side=tk.LEFT, padx=5)
+
+preset_1hour = tk.Button(preset_frame, text="1 hour")
+preset_1hour.config(command=lambda: set_preset_time(1, 0, 0))
+preset_1hour.pack(side=tk.LEFT, padx=5)
+
 #input
 hoursentry = tk.Entry(timeinput_frame, width=2, textvariable=hours, font=("arial", 18))
 hoursentry.pack(side =tk.LEFT)
