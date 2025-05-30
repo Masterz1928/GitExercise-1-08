@@ -6,7 +6,7 @@ import datetime
 import zipfile
 
 
-# color settings
+# color settings of the default
 WHITE_BG       = "#fdfcfa"
 BLUE_BG        = "#e8f0fe"
 BLUE_ACCENT    = "#cfe2ff"
@@ -25,9 +25,15 @@ remarks={}
 pinned_files = []
 folder_path = "C:/Notes"
 trash_folder = os.path.join(folder_path, "Trash")
-os.makedirs(trash_folder, exist_ok=True)
-remark_path= "C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/remarks.txt" 
+remark_path=os.path.join(folder_path,"Remark")
+pinned_path=os.path.join(folder_path,"pinned note")
+remark_file=os.path.join(remark_path, "remarks.txt")
+pinned_file = os.path.join(pinned_path, "ImportantNote.txt")
 
+#make sure that the directory is always occur , if disappear , it will create a new
+os.makedirs(trash_folder, exist_ok=True)
+os.makedirs(remark_path, exist_ok=True)
+os.makedirs(pinned_path, exist_ok=True)
 #main page code
 root = tk.Tk()
 root.title("MMU Study Buddy")
@@ -67,7 +73,7 @@ style.map("TNotebook.Tab",
 notebook_frame = tk.Frame(root, bg=WHITE_BG)
 notebook_frame.pack(fill='both', expand=True, padx=20, pady=(0, 20))
 
-notebook = ttk.Notebook(notebook_frame)
+notebook = ttk.Notebook(notebook_frame)  #notebook style design
 notebook.pack(fill='both', expand=True)
 
 #home tab with feature card
@@ -88,15 +94,10 @@ def check_reminders_on_startup():
 
     for date_str, remark in remarks.items():
         try:
-            # Try full datetime first
-            reminder_time = datetime.datetime.strptime(date_str, "%Y-%m-%d %H:%M")
+            reminder_time = datetime.datetime.strptime(date_str, "%Y-%m-%d") #just make sure all remark saved run with the true format 
         except ValueError:
-            try:
-                # If no time part, parse date only, assume midnight
-                reminder_time = datetime.datetime.strptime(date_str, "%Y-%m-%d")
-            except ValueError:
-                print(f"Invalid date format: {date_str}")
-                continue
+            print(f"Invalid date format: {date_str}")
+            continue
         
         if now <= reminder_time :
             due_reminders.append(f"{date_str} → {remark}")
@@ -106,7 +107,7 @@ def check_reminders_on_startup():
         messagebox.showinfo("Due Reminders", message)
 
 def get_greeting():
-    current_hour = datetime.datetime.now().hour
+    current_hour = datetime.datetime.now().hour   # the greeting word will change with the time 
     if 5 <= current_hour < 12:
         return "🌞 Good Morning!"
     elif 12 <= current_hour < 18:
@@ -141,12 +142,12 @@ fade_in(greeting_label)
 def get_pinned_notes_from_txt():
     notes = []
     try:
-        with open("C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/pinned_notes.txt", "r", encoding="utf-8") as file:
+        with open(pinned_file, "r", encoding="utf-8") as file:# encoding is used to handles ASCII and more, and avoids errors or misread characters.
             for line in file:
                 filename = line.strip()
                 if filename:
                     notes.append(filename)
-        return notes[:3]
+        return notes[:3]# only show the first three
     except FileNotFoundError:
         return []
 
@@ -380,15 +381,15 @@ def unpin_from_tree():
         messagebox.showinfo("Remind", "Please select a pinned note first.")
 
 def save_pinned_notes():
-    with open("C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/pinned_notes.txt", "w") as f:
+    with open(pinned_file, "w") as f:
         for item in tree.get_children():
             filename = tree.item(item, "values")[0]
             f.write(f"{filename}\n")
 
 
 def load_pinned_notes():
-    if os.path.exists("C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/pinned_notes.txt"):
-        with open("C:/Users/ASUS/project/pythonfile/Mini_IT_Project-1-08/pinned_notes.txt", "r") as f:
+    if os.path.exists(pinned_file):
+        with open(pinned_file, "r") as f:
             for line in f:
                 note = line.strip()
                 pinned_files.append(note)
@@ -627,19 +628,42 @@ def apply_theme(choice):
         )
 
 # Save/load remarks
+def highlight_remark_dates():
+    cal.calevent_remove('all')  # clear previous events/highlights
+
+    for date_str, remark in remarks.items():
+        tag = None
+        if "#low" in remark:
+            tag = 'low'
+        elif "#medium" in remark:
+            tag = 'medium'
+        elif "#high" in remark:
+            tag = 'high'
+
+        if tag:
+            try:
+                # Convert date string to datetime.date object
+                date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+                # Add a calendar event with the tag (color)
+                cal.calevent_create(date_obj, remark, tag)
+            except Exception as e:
+                print(f"Could not tag date {date_str}: {e}")
+
 def load_remarks():
-    if os.path.exists(remark_path):
-        with open(remark_path, "r") as f:
+    if os.path.exists(remark_file):
+        with open(remark_file, "r") as f:
             for line in f:
                 if "|" in line:
                     date, remark = line.strip().split("|", 1)
                     remarks[date] = remark
+    highlight_remark_dates()
 
 def save_remarks():
     try:
-        with open(remark_path, "w") as f:
+        with open(remark_file, "w") as f:
             for date, remark in remarks.items():
                 f.write(f"{date}|{remark}\n")
+        highlight_remark_dates()
     except FileNotFoundError:
         print("error")
 
@@ -648,12 +672,37 @@ def save_remarks():
 def save_remark_for_date():
     selected_date = cal.get_date()
     remark = remark_text.get("1.0", tk.END).strip()
-    if remark:
-        remarks[selected_date] = remark
-        save_remarks()
-        messagebox.showinfo("Saved", f"Remark for {selected_date} saved.")
-    else:
+
+    if not remark:
         messagebox.showwarning("Empty", "Please enter a remark.")
+        return
+
+    def open_importance_popup():
+        popup = tk.Toplevel()
+        popup.title("Select Importance")
+        popup.geometry("250x200")
+
+        tk.Label(popup, text="Select importance level:", font=("Arial", 12)).pack(pady=10)
+
+        importance_var = tk.StringVar(value="None")
+
+        tk.Radiobutton(popup, text="Low", variable=importance_var, value="#low").pack(anchor="w", padx=20)
+        tk.Radiobutton(popup, text="Medium", variable=importance_var, value="#medium").pack(anchor="w", padx=20)
+        tk.Radiobutton(popup, text="High", variable=importance_var, value="#high").pack(anchor="w", padx=20)
+        tk.Radiobutton(popup, text="None", variable=importance_var, value="None").pack(anchor="w", padx=20)
+
+        def confirm_importance():
+            tag = importance_var.get()
+            final_remark = remark + (f" {tag}" if tag != "None" else "")
+            remarks[selected_date] = final_remark
+            save_remarks()
+            highlight_remark_dates()
+            popup.destroy()
+            messagebox.showinfo("Saved", f"Remark for {selected_date} saved.")
+
+        tk.Button(popup, text="Save", command=confirm_importance).pack(pady=10)
+
+    open_importance_popup()
 
 # Display saved remark for selected date
 def display_remark_for_date(event=None):
@@ -683,6 +732,7 @@ def clear_remark_for_date():
         del remarks[selected_date]  # Remove the saved remark
         save_remarks()  # Save updated remarks to file
     messagebox.showinfo("Cleared", f"Remark for {selected_date} cleared.")
+    highlight_remark_dates()
 
 button_frame = tk.Frame(calendar_tab, bg=WHITE_BG)
 button_frame.pack(pady=10)
@@ -705,8 +755,12 @@ theme_button.grid(row=0, column=2, padx=5)
 view_all_button = tk.Button(button_frame, text="📋 View All Remarks", command=view_all_remarks)
 view_all_button.grid(row=0, column=3, padx=5)
 
+cal.tag_config('low', background='lightgreen')
+cal.tag_config('medium', background='orange')
+cal.tag_config('high', background='red')
 # Bind calendar selection to display remark
 cal.bind("<<CalendarSelected>>", display_remark_for_date)
+
 
 # Load saved remarks on startup
 load_remarks()
