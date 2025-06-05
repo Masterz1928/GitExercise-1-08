@@ -434,9 +434,9 @@ LOCAL_FOLDER_PATH = r"C:\Notes"
 
 def authenticate():
     creds = None
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
-            creds = pickle.load(token)
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
@@ -445,10 +445,10 @@ def authenticate():
             CREDENTIALS_PATH = os.path.join(BASE_DIR, "credentials.json")
             flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
             creds = flow.run_local_server(port=0)
-        with open('token.pickle', 'wb') as token:
-            pickle.dump(creds, token)
-    return build('drive', 'v3', credentials=creds)
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
 
+    return build('drive', 'v3', credentials=creds)
 
 def get_or_create_main_folder(service):
     global folder
