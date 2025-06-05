@@ -1,13 +1,25 @@
 import tkinter as tk
 from tkcalendar import Calendar
 from tkinter import ttk,messagebox,colorchooser, filedialog
-from datetime import date,datetime
 import zipfile
 from tkhtmlview import HTMLLabel
 import markdown
 import re
 from bs4 import BeautifulSoup
 import os
+from pathlib import Path
+from datetime import date, datetime, timedelta, timezone
+import os.path
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+from tkinter import ttk, messagebox
+import tkinter as tk
+import threading 
+from dateutil import parser
 
 def run_notepad(file_content=""):
     global Text_Box
@@ -318,7 +330,7 @@ def run_notepad(file_content=""):
         notebook.add(tab3, text="Preview")
         
         Tab3Text = tk.Label(tab3, text=(
-            "• Preview updates automatically on save.\n"
+            "• Preview updates automatically on after typing.\n"
             "• Supports Markdown and HTML preview.\n"
             "• Some advanced tags may not render fully."
         ), justify="left", padx=10, pady=10)
@@ -603,278 +615,240 @@ def open_file_button_clicked():
         open_note_in_notepad(file_path)
 
 
+# color settings of the default
+WHITE_BG       = "#fdfcfa"
+BLUE_BG        = "#e8f0fe"
+BLUE_ACCENT    = "#cfe2ff"
+BLUE_SELECTED  = "#a7c7e7"
+TEXT_COLOR     = "#2c3e50"
+LOGO_COLOR     = "#1f4e79"
 
-def show_frame(frame):
-    frame.tkraise()
-#show the search bar only appear when it changes to the note_frame
-    if frame == home_frame:
-        search_entry.place(relx=0.5, rely=0.5, anchor="center")
+FONT_LOGO = ("Segoe UI", 14, "bold")
+FONT_HEADING = ("Segoe UI", 18, "bold")
+FONT_TEXT = ("Segoe UI", 11)
+
+
+
+# all the path and source
+remarks={}
+pinned_files = []
+folder_path = "C:/Notes"
+trash_folder = os.path.join(folder_path, "Trash")
+remark_path=os.path.join(folder_path,"Remark")
+pinned_path=os.path.join(folder_path,"pinned note")
+remark_file=os.path.join(remark_path, "remarks.txt")
+pinned_file = os.path.join(pinned_path, "ImportantNote.txt")
+
+#make sure that the directory is always occur , if disappear , it will create a new
+os.makedirs(trash_folder, exist_ok=True)
+os.makedirs(remark_path, exist_ok=True)
+os.makedirs(pinned_path, exist_ok=True)
+#main page code
+root = tk.Tk()
+root.title("MMU Study Buddy")
+root.geometry("900x600")
+root.configure(bg=WHITE_BG)
+root.minsize(700, 500)
+
+def get_icon():
+    # Get current script folder
+    base_dir = Path(__file__).parent.resolve()
+    icon_path = base_dir / "025.png"
+
+    if icon_path.exists():
+        return tk.PhotoImage(file=icon_path)
     else:
-        search_entry.place_forget()
+        print("Icon file not found.")
+        return None
+icon = get_icon()
+if icon:
+    root.iconphoto(False, icon)
 
 
+top_frame = tk.Frame(root, bg=BLUE_BG, height=60)  # Use new blue background
+top_frame.pack(fill='x')
+
+logo_label = tk.Label(top_frame,
+                      text="📘 MMU Study Buddy",  
+                      font=FONT_LOGO,
+                      bg=BLUE_BG,
+                      fg=LOGO_COLOR,         
+                      anchor='w')
+logo_label.pack(side='left', padx=20, pady=10)
+
+#notebook tab style
+style = ttk.Style()
+style.configure('TNotebook', background=WHITE_BG, borderwidth=0)
+style.configure('TNotebook.Tab',
+                background=BLUE_ACCENT,
+                foreground=TEXT_COLOR,
+                padding=[20, 10],
+                font=("Segoe UI", 10, "bold"),
+                borderwidth=0)
+style.map("TNotebook.Tab",
+          background=[("selected", BLUE_SELECTED)],
+          expand=[("selected", [1, 1, 1, 0])])
+
+#notebook area
+notebook_frame = tk.Frame(root, bg=WHITE_BG)
+notebook_frame.pack(fill='both', expand=True, padx=20, pady=(0, 20))
+
+notebook = ttk.Notebook(notebook_frame)  #notebook style design
+notebook.pack(fill='both', expand=True)
+
+#home tab with feature card
+home = tk.Frame(notebook, bg=WHITE_BG)
+notebook.add(home, text="🏠 Home")
+
+
+home_title = tk.Label(home,
+                      text="🌟 Welcome to Your MMU Study Buddy! 🌟",
+                      font=FONT_HEADING,
+                      bg=WHITE_BG,
+                      fg=TEXT_COLOR)
+home_title.pack(pady=20)
+
+def check_reminders_on_startup():
+    now = datetime.now()
+    due_reminders = []
+
+    for date_str, remark in remarks.items():
+        try:
+            reminder_time = datetime.strptime(date_str, "%Y-%m-%d") #just make sure all remark saved run with the true format 
+        except ValueError:
+            print(f"Invalid date format: {date_str}")
+            continue
+        
+        if now <= reminder_time :
+            due_reminders.append(f"{date_str} → {remark}")
+
+    if due_reminders:
+        message = "\n\n".join(due_reminders)
+        messagebox.showinfo("Due Reminders", message)
+
+def get_greeting():
+    current_hour = datetime.now().hour   # the greeting word will change with the time 
+    if 5 <= current_hour < 12:
+        return "🌞 Good Morning!"
+    elif 12 <= current_hour < 18:
+        return "🌤️ Good Afternoon!"
+    elif 18 <= current_hour < 21:
+        return "🌆 Good Evening!"
+    else:
+        return "🌙 Good Night!"
+
+
+def fade_in(widget, delay=250, steps=10):
+    colors = [
+        "#CCCCCC", "#BBBBBB", "#AAAAAA", "#999999", "#888888",
+        "#777777", "#666666", "#444444", "#222222", "#000000"
+    ]
+
+    def step(i=0):
+        if i < len(colors):
+            widget.configure(foreground=colors[i])
+            widget.after(delay, step, i + 1)
+
+    step()
+
+# Add inside your `home_frame` setup
+greeting_text = get_greeting()
+greeting_label = tk.Label(home, text=greeting_text, font=("Segoe UI", 14, "bold"), fg="#000000", bg=home["bg"])
+greeting_label.pack(pady=(10, 0))
+
+# Start fade-in effect
+fade_in(greeting_label)
+
+def get_pinned_notes_from_txt():
+    notes = []
+    try:
+        with open(pinned_file, "r", encoding="utf-8") as file:# encoding is used to handles ASCII and more, and avoids errors or misread characters.
+            for line in file:
+                filename = line.strip()
+                if filename:
+                    notes.append(filename)
+        return notes[:3]# only show the first three
+    except FileNotFoundError:
+        return []
+
+def populate_pinned_preview(parent_frame):
+    for widget in parent_frame.winfo_children():
+        widget.destroy()
+
+    tk.Label(parent_frame, text="📌 Pinned Notes", font=("Arial", 12, "bold")).pack(anchor="w", padx=10, pady=(5, 0))
+
+    listbox = tk.Listbox(parent_frame, width=60, height=6, bg=WHITE_BG)
+    listbox.pack(fill="x", padx=10, pady=5)
+
+    pinned = get_pinned_notes_from_txt()
+    if pinned:
+        for filename in pinned:
+            listbox.insert("end", filename)
+    else:
+        listbox.insert("end", "No pinned notes.")
+
+
+
+card_frame = tk.Frame(home, bg=WHITE_BG)
+card_frame.pack(pady=10)
+
+pinned_preview_frame = ttk.Frame(home)
+pinned_preview_frame.pack(fill="x", padx=10, pady=(0, 10))
+
+
+def create_feature_card(parent, icon, title, desc, tab_index):
+    card = tk.Frame(parent, bg=BLUE_ACCENT, bd=1, relief="flat", highlightthickness=2,
+                    highlightbackground=BLUE_SELECTED)
+    card.bind("<Button-1>", lambda e: notebook.select(tab_index))
+
+    def on_enter(e): card.config(bg=BLUE_SELECTED)
+    def on_leave(e): card.config(bg=BLUE_ACCENT)
+
+    card.bind("<Enter>", on_enter)
+    card.bind("<Leave>", on_leave)
+
+    icon_label = tk.Label(card, text=icon, font=("Segoe UI Emoji", 30), bg=BLUE_ACCENT)
+    icon_label.pack(pady=(10, 0))
+
+    title_label = tk.Label(card, text=title, font=("Segoe UI", 13, "bold"), bg=BLUE_ACCENT, fg=TEXT_COLOR)
+    title_label.pack(pady=(5, 5))
+
+    desc_label = tk.Label(card, text=desc, font=("Segoe UI", 10), bg=BLUE_ACCENT, fg=TEXT_COLOR, wraplength=180,
+                          justify="center")
+    desc_label.pack(pady=(5, 10))
+
+    return card
+
+
+# Placeholder tabs for Timer and To-Do for now
+timer_tab = tk.Frame(notebook, bg=WHITE_BG)
+notebook.add(timer_tab, text="⏲ Timer")
+
+todo_tab = tk.Frame(notebook, bg=WHITE_BG)
+notebook.add(todo_tab, text="✅ To-Do List")
+
+# all note function
 def update_file_list():
     file_listbox.delete(0, tk.END)
-    files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
+    files = [f for f in os.listdir(folder_path) if f.endswith((".txt", ".md", ".html"))]
     for file in files:
         file_listbox.insert(tk.END, file)
 
-def deleting_notes():
-    selected_files = file_listbox.curselection() #Get the file that the user selected 
-    if not selected_files: # IF no files are selected, then do this  
-        messagebox.showwarning("No selection", "Select a file to delete.") #Prompt the User
-        return #Basically telling python to stop runninng this part and go out of this block of code 
-    file_delete_name = file_listbox.get(selected_files[0]) # Since the selected_files variable contains a tuple, we take the first value e.g. (1,) 
-    confirm = messagebox.askyesno("Delete?", f"Are you sure you want to delete '{file_delete_name}'?")
-    if confirm:
-        os.remove(os.path.join(folder_path, file_delete_name)) # Removes the file 
-        update_file_list() #Updates the Listbox 
+def search_notes():
+    search_term = search_entry.get().lower()
+    file_listbox.delete(0, tk.END)
+    files = [f for f in os.listdir(folder_path) if f.endswith((".txt", ".md", ".html"))]
 
-
-#function for listbox
-def show_listbox_menu(event):
-    try:
-        # Select the item under mouse
-        file_listbox.selection_clear(0, tk.END)# clear selection if choose other things
-        file_listbox.selection_set(file_listbox.nearest(event.y))#find item nearest to where you clicked.
-        listbox_menu.post(event.x_root, event.y_root)# the menu show at mouse screen position
-    finally:
-        listbox_menu.grab_release()#prevent the menu freeze the app until you click
-
-def pin_selected_note():
-    selected = file_listbox.curselection()
-    if selected:
-        file_name = file_listbox.get(selected)
-        if file_name not in pinned_files:
-            confirm = messagebox.askyesno("Pin", f"Do you want to pin '{file_name}'?")
-            if confirm:
-                pinned_files.append(file_name)
-                tree.insert("", tk.END, values=(file_name,))
-                messagebox.showinfo("Info", f"Pinned '{file_name}' successfully!")
-                save_pinned_notes()
-        else:
-            messagebox.showinfo("Info", "This note is already pinned.")
-
-
-
-def unpin_selected_note():
-    selected = file_listbox.curselection()
-    if selected:
-        file_name = file_listbox.get(selected)
-        if file_name in pinned_files:
-            confirm = messagebox.askyesno("Unpin", f"Do you want to unpin '{file_name}'?")
-            if confirm:
-                pinned_files.remove(file_name)
-                # Remove from treeview
-                for item in tree.get_children():
-                    if tree.item(item, "values")[0] == file_name:
-                        tree.delete(item)
-                        break
-                messagebox.showinfo("Info", f"Unpinned '{file_name}' successfully!")
-        else:
-            messagebox.showinfo("Remind", "This note is not pinned yet.")
-    else:
-        messagebox.showinfo("Remind", "Please select a note first.")
-
-
-
-
-# function for treeview
-def show_tree_menu(event):
-    try:
-        # Select the item under the mouse
-        tree.selection_remove(tree.selection())
-        tree.selection_set(tree.identify_row(event.y))#find item nearest you clicked.
-        tree_menu.post(event.x_root, event.y_root)
-    finally:
-        tree_menu.grab_release()#prevent menu freeze the app until you click
-
-
-def unpin_from_tree():
-    selected = tree.selection()
-    if selected:
-        file_name = tree.item(selected[0], "values")[0]
-        confirm = messagebox.askyesno("Unpin", f"Do you want to unpin '{file_name}'?")
-        if confirm:
-            if file_name in pinned_files:
-                pinned_files.remove(file_name)
-            tree.delete(selected[0])
-            messagebox.showinfo("Info", f"Unpinned '{file_name}' successfully!")
-    else:
-        messagebox.showinfo("Remind", "Please select a pinned note first.")
-
-def save_pinned_notes():
-    with open("pinned_notes.txt", "w") as f:# create a file if the specified file does not exist
-        for note in pinned_files:
-            f.write(note + "\n")#open if exist ,,,if no ,create a new file
-
-
-
-def load_pinned_notes():
-    if os.path.exists("pinned_notes.txt"):
-        with open("pinned_notes.txt", "r") as f:
-            for line in f:
-                note = line.strip()
-                pinned_files.append(note)
-                tree.insert("", tk.END, values=(note,))
-
-
-
-# In your calendar section:
-def setup_calendar():
-    global cal
-    today = date.today()
-    cal = Calendar(
-        calendar_frame,
-        selectmode='day',
-        font=("Arial", 16),
-        cursor="hand1"
-    )
-    cal.pack(padx=(0,50), pady=(80,90), expand=True, fill="both")
-
-def choose_calendar_color():
-    color = colorchooser.askcolor(title="Choose Calendar Color")[1]  # Open color picker and get HEX color
-    if color:
-        cal.config(
-            background=color,
-            headersbackground=color,
-            disabledbackground=color,
-            normalbackground=color,
-            weekendbackground=color,
-            selectbackground=color,
-            selectforeground="white",
-        )
-
-def apply_theme(choice):
-    if choice == "Custom":
-        choose_calendar_color()
-    elif choice == "Pink":
-        cal.config(
-            background="#FFE4E1",  # Soft pink background
-            headersbackground="#FFB6C1",  # A bit stronger pink for headers
-            disabledbackground="#FFE4E1",
-            normalbackground="#FFE4E1",
-            weekendbackground="#FFD1DC",
-            selectbackground="#FF69B4",
-            selectforeground="white",
-        )
-    elif choice == "Blue":
-        cal.config(
-            background="#E0FFFF",  # Light cyan background
-            headersbackground="#87CEFA",  # Sky blue headers
-            disabledbackground="#E0FFFF",
-            normalbackground="#E0FFFF",
-            weekendbackground="#ADD8E6",
-            selectbackground="#00BFFF",
-            selectforeground="white",
-        )
-    elif choice == "Purple":
-        cal.config(
-            background="#E6E6FA",  # Lavender background
-            headersbackground="#D8BFD8",  # Thistle purple for headers
-            disabledbackground="#E6E6FA",
-            normalbackground="#E6E6FA",
-            weekendbackground="#D8BFD8",
-            selectbackground="#9370DB",
-            selectforeground="white",
-        )
-
-#remark of the calendar
-def load_remarks():
-    if os.path.exists("remarks.txt"):
-        with open("remarks.txt", "r") as f:
-            for line in f:
-                if "|" in line:
-                    date, remark = line.strip().split("|", 1)
-                    remarks[date] = remark
-
-
-def save_remarks():
-    with open("remarks.txt", "w") as f:
-        for date, remark in remarks.items():
-            f.write(f"{date}|{remark}\n")
-
-# Save button
-def save_remark_for_date():
-    selected_date = cal.get_date()
-    remark = remark_entry.get().strip()
-    if remark:
-        remarks[selected_date] = remark
-        save_remarks()
-        messagebox.showinfo("Saved", f"Remark for {selected_date} saved.")
-    else:
-        messagebox.showwarning("Empty", "Please enter a remark.")
-
-# Show existing remark when date selected
-
-
-def display_remark_for_date(event=None):
-    selected_date = cal.get_date()
-    remark_entry.delete(0, tk.END)
-    if selected_date in remarks:
-        remark_entry.insert(0, remarks[selected_date])
-
-
-def search_notes(event=None):
-    search_term = search_entry.get().lower()  # Get search term and make it lowercase for case-insensitive comparison
-    file_listbox.delete(0, tk.END)  # Clear the current list in the listbox
-
-    # Loop through all files and add those that match the search term
-    files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
     for file in files:
-        if search_term in file.lower():  # Case-insensitive comparison
-            file_listbox.insert(tk.END, file)
-
-def clear_search():
-    search_entry.delete(0, tk.END)  # Clear the search bar
-    update_file_list()  # Show all files again
-
-
-def export_all_notes():
-    export_path = "all_notes_export.txt"
-    with open(export_path, "w", encoding="utf-8") as export_file:
-        files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
-        if not files:
-            messagebox.showinfo("Info", "No notes to export.")
-            return
-
-        for file in files:
-            file_path = os.path.join(folder_path, file)
-            export_file.write(f"\n--- {file} ---\n")
+        file_path = os.path.join(folder_path, file)
+        try:
             with open(file_path, "r", encoding="utf-8") as f:
-                export_file.write(f.read() + "\n")
-
-    messagebox.showinfo("Success", f"All notes exported to '{export_path}' successfully.")
-
-def export_notes_with_format():
-    # Ask user to choose format
-    format_choice = messagebox.askquestion("Export Format", "Export as ZIP file?")
-
-    if format_choice == "yes":
-        export_all_notes_as_zip()
-    else:
-        None
-
-
-def export_all_notes_as_zip():
-    files = [f for f in os.listdir(folder_path) if f.endswith(".txt")]
-    if not files:
-        messagebox.showinfo("Info", "No notes to export.")
-        return
-
-    export_folder = "C:/Notes/Exports"
-    os.makedirs(export_folder, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    zip_path = os.path.join(export_folder, f"exported_notes_{timestamp}.zip")
-
-    try:
-        with zipfile.ZipFile(zip_path, 'w') as zipf:
-            for file in files:
-                file_path = os.path.join(folder_path, file)
-                zipf.write(file_path, arcname=file)
-        messagebox.showinfo("Success", f"Notes exported as ZIP to:\n{zip_path}")
-    except Exception as e:
-        messagebox.showerror("Error", f"Failed to export notes:\n{e}")
+                content = f.read().lower()
+            if search_term in content:
+                file_listbox.insert(tk.END, file)
+        except Exception as e:
+            # Optional: handle unreadable files gracefully
+            print(f"Could not read {file}: {e}")
 
 def perform_advanced_search():
     query = search_entry.get().strip().lower()
@@ -911,163 +885,908 @@ def perform_advanced_search():
     else:
         messagebox.showinfo("Search", "No matches found.")
 
-root= tk.Tk()
-#the title show on the top
-root.title("MMU Study Buddy")
-# the size of whole window show
-root.state("zoomed")
+def export_all_notes():
+    export_path = "all_notes_export.txt"
+    with open(export_path, "w", encoding="utf-8") as export_file:
+        files = [f for f in os.listdir(folder_path) if f.endswith((".txt",".html",".md"))]
+        if not files:
+            messagebox.showinfo("Info", "No notes to export.")
+            return
 
-#dictionary & path
-remarks={}
-pinned_files = []
-folder_path = "C:/Notes"
+        for file in files:
+            file_path = os.path.join(folder_path, file)
+            export_file.write(f"\n--- {file} ---\n")
+            with open(file_path, "r", encoding="utf-8") as f:
+                export_file.write(f.read() + "\n")
+
+    messagebox.showinfo("Success", f"All notes exported to '{export_path}' successfully.")
+
+def export_notes_with_format():
+    # Ask user to choose format
+    format_choice = messagebox.askquestion("Export Format", "Export as ZIP file?")
+
+    if format_choice == "yes":
+        export_all_notes_as_zip()
+
+def export_all_notes_as_zip():
+    files = [f for f in os.listdir(folder_path) if f.endswith((".txt", ".html", ".md"))]
+    if not files:
+        messagebox.showinfo("Info", "No notes to export.")
+        return
+
+    export_folder = "C:/Notes/Exports"
+    os.makedirs(export_folder, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    zip_path = os.path.join(export_folder, f"exported_notes_{timestamp}.zip")
+
+    try:
+        with zipfile.ZipFile(zip_path, 'w') as zipf:
+            for file in files:
+                file_path = os.path.join(folder_path, file)
+                zipf.write(file_path, arcname=file)
+        messagebox.showinfo("Success", f"Notes exported as ZIP to:\n{zip_path}")
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to export notes:\n{e}")
+
+def show_listbox_menu(event):
+    try:
+        # Select the item under mouse
+        file_listbox.selection_clear(0, tk.END)# clear selection if choose other things
+        file_listbox.selection_set(file_listbox.nearest(event.y))#find item nearest to where you clicked.
+        listbox_menu.post(event.x_root, event.y_root)# the menu show at mouse screen position
+    finally:
+        listbox_menu.grab_release()#prevent the menu freeze the app until you click
+
+def pin_selected_note():
+    selected = file_listbox.curselection()
+    if selected:
+        file_name = file_listbox.get(selected)
+        if file_name not in pinned_files:
+            confirm = messagebox.askyesno("Pin", f"Do you want to pin '{file_name}'?")
+            if confirm:
+                pinned_files.append(file_name)
+                tree.insert("", tk.END, values=(file_name,))
+                save_pinned_notes()
+                populate_pinned_preview(pinned_preview_frame)
+                messagebox.showinfo("Info", f"Pinned '{file_name}' successfully!")
+        else:
+            messagebox.showinfo("Info", "This note is already pinned.")
 
 
 
-# Create a menu for right-click (context menu)
-listbox_menu = tk.Menu(root, tearoff=0)# tear off is the dash line in the menu list
+def unpin_selected_note():
+    selected = file_listbox.curselection()
+    if selected:
+        file_name = file_listbox.get(selected)
+        if file_name in pinned_files:
+            confirm = messagebox.askyesno("Unpin", f"Do you want to unpin '{file_name}'?")
+            if confirm:
+                pinned_files.remove(file_name)
+                # Remove from treeview
+                for item in tree.get_children():
+                    if tree.item(item, "values")[0] == file_name:
+                        tree.delete(item)
+                        break
+                save_pinned_notes()  # ✅ Save the updated list
+                populate_pinned_preview(pinned_preview_frame)
+                messagebox.showinfo("Info", f"Unpinned '{file_name}' successfully!")
+        else:
+            messagebox.showinfo("Remind", "This note is not pinned yet.")
+    else:
+        messagebox.showinfo("Remind", "Please select a note first.")
+
+def show_tree_menu(event):
+    try:
+        # Select the item under the mouse
+        tree.selection_remove(tree.selection())
+        tree.selection_set(tree.identify_row(event.y))#find item nearest you clicked.
+        tree_menu.post(event.x_root, event.y_root)
+    finally:
+        tree_menu.grab_release()#prevent menu freeze the app until you click
+
+
+def unpin_from_tree():
+    selected = tree.selection()
+    if selected:
+        file_name = tree.item(selected[0], "values")[0]
+        confirm = messagebox.askyesno("Unpin", f"Do you want to unpin '{file_name}'?")
+        if confirm:
+            if file_name in pinned_files:
+                pinned_files.remove(file_name)
+            tree.delete(selected[0])
+            save_pinned_notes()  # ✅ Save the updated list
+            populate_pinned_preview(pinned_preview_frame)
+            messagebox.showinfo("Info", f"Unpinned '{file_name}' successfully!")
+    else:
+        messagebox.showinfo("Remind", "Please select a pinned note first.")
+
+def save_pinned_notes():
+    with open(pinned_file, "w") as f:
+        for item in tree.get_children():
+            filename = tree.item(item, "values")[0]
+            f.write(f"{filename}\n")
+
+
+def load_pinned_notes():
+    if os.path.exists(pinned_file):
+        with open(pinned_file, "r") as f:
+            for line in f:
+                note = line.strip()
+                pinned_files.append(note)
+                tree.insert("", tk.END, values=(note,))
+
+def deleting_notes():
+    selected_files = file_listbox.curselection()
+    if not selected_files:
+        messagebox.showwarning("No selection", "Select a file to delete.")
+        return
+    file_delete_name = file_listbox.get(selected_files[0])
+    confirm = messagebox.askyesno("Delete?", f"Move '{file_delete_name}' to Trash?")
+    if confirm:
+        original_path = os.path.join(folder_path, file_delete_name)
+        trash_path = os.path.join(trash_folder, file_delete_name)
+        os.rename(original_path, trash_path)
+        update_file_list()
+        messagebox.showinfo("Deleted", f"'{file_delete_name}' moved to Trash.")
+
+def open_trash_bin():
+    trash_win = tk.Toplevel(root)
+    trash_win.title("Trash Bin")
+    trash_win.geometry("500x400")
+
+    tk.Label(trash_win, text="Deleted Notes", font=("Arial", 16)).pack(pady=10)
+
+    trash_listbox = tk.Listbox(trash_win, width=60, height=15)
+    trash_listbox.pack(pady=10)
+
+    deleted_files = os.listdir(trash_folder)
+    for file in deleted_files:
+        trash_listbox.insert(tk.END, file)
+
+    def restore_file():
+        selected = trash_listbox.curselection()
+        if not selected:
+            messagebox.showinfo("Restore", "Please select a file.")
+            return
+        filename = trash_listbox.get(selected[0])
+        from_path = os.path.join(trash_folder, filename)
+        to_path = os.path.join(folder_path, filename)
+        if os.path.exists(to_path):
+            messagebox.showerror("Restore Failed", f"A file named '{filename}' already exists.")
+            return
+        os.rename(from_path, to_path)
+        trash_listbox.delete(selected[0])
+        update_file_list()
+        messagebox.showinfo("Restored", f"'{filename}' has been restored.")
+
+    def delete_all_files():
+        confirm = messagebox.askyesno("Delete All", "Are you sure you want to permanently delete all files in the Trash Bin?")
+        if confirm:
+            for f in os.listdir(trash_folder):
+                os.remove(os.path.join(trash_folder, f))
+            trash_listbox.delete(0, tk.END)
+            messagebox.showinfo("Deleted", "All files permanently deleted")
+
+    btn_restore = ttk.Button(trash_win, text="Restore Selected", command=restore_file)
+    btn_restore.pack(side='left', padx=(100,20), pady=10)
+
+    btn_delete_all = ttk.Button(trash_win, text="Clear", command=delete_all_files)
+    btn_delete_all.pack(side='right', padx=(20,100), pady=10)
+
+# Google Drive API 
+
+
+import mimetypes
+import webbrowser
+import json
+
+# Defines permission 
+# metadata - view file names adn metadata 
+#drive.file uploading files 
+SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.file"]
+auth_window = None  
+SYNC_META_PATH = r"C:\Notes\.syncmeta.json"
+LOCAL_FOLDER_PATH = r"C:\Notes"
+
+
+def authenticate():
+    creds = None
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+            CREDENTIALS_PATH = os.path.join(BASE_DIR, "credentials.json")
+            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
+            creds = flow.run_local_server(port=0)
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+
+    return build('drive', 'v3', credentials=creds)
+
+def get_or_create_main_folder(service):
+    global folder
+    folder_name = "MMU Study Buddy Files"
+    query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+    results = service.files().list(q=query, fields="files(id, name)").execute()
+    items = results.get('files', [])
+    if items:
+        return items[0]['id']
+    file_metadata = {
+        'name': folder_name,
+        'mimeType': 'application/vnd.google-apps.folder'
+    }
+    folder = service.files().create(body=file_metadata, fields='id').execute()
+    return folder['id']
+
+##############
+
+def sync_upload_file(service, file_path, folder_id, existing_drive_id=None):
+    file_name = os.path.basename(file_path)
+    file_metadata = {"name": file_name, "parents": [folder_id]}
+    media = MediaFileUpload(file_path, resumable=True)
+
+    if existing_drive_id:
+        uploaded_file = service.files().update(
+            fileId=existing_drive_id,
+            media_body=media
+        ).execute()
+    else:
+        uploaded_file = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields="id, modifiedTime"
+        ).execute()
+
+    # 🔁 Make sure to fetch the updated modifiedTime
+    updated_file = service.files().get(fileId=uploaded_file["id"], fields="id, modifiedTime").execute()
+
+    return {
+        "local_modified": get_local_modified_time(file_path).isoformat(),
+        "drive_modified": updated_file["modifiedTime"],
+        "drive_id": updated_file["id"]
+    }
+
+
+
+def sync_download_files(service, file_id, local_file_path):
+    try:
+        request = service.files().get_media(fileId=file_id)
+        os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
+        with open(local_file_path, 'wb') as f:
+            downloader = MediaIoBaseDownload(f, request)
+            done = False
+            while not done:
+                status, done = downloader.next_chunk()
+            drive_file = service.files().get(fileId=file_id, fields='modifiedTime').execute()
+        drive_mod_time_str = drive_file['modifiedTime']
+        drive_mod_time = parser.parse(drive_mod_time_str)
+        mod_timestamp = drive_mod_time.timestamp()
+        os.utime(local_file_path, (mod_timestamp, mod_timestamp))
+        return {
+            "drive_id": file_id,
+            "drive_modified": drive_mod_time_str,
+            "local_modified": drive_mod_time.isoformat()
+    }
+    except Exception as e:
+        print(f"error:{str(e)}")
+
+
+def list_drive_files(service, folder_id):
+    query = f"'{folder_id}' in parents and trashed = false"
+    fields = "files(id, name, modifiedTime)"
+    results = service.files().list(q=query, fields=fields).execute()
+    return results.get('files', [])
+
+# ---------- Sync meta (local cache) ----------
+
+def load_sync_meta():
+    if os.path.exists(SYNC_META_PATH):
+        try:
+            with open(SYNC_META_PATH, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if not content:
+                    return {}
+                return json.loads(content)
+        except json.JSONDecodeError:
+            print("⚠️ Warning: .syncmeta.json is corrupted or invalid. Resetting.")
+            return {}
+    return {}
+
+def save_sync_meta(meta):
+    print(f"Saving sync meta to: {SYNC_META_PATH}")
+    try:
+        with open(SYNC_META_PATH, "w", encoding="utf-8") as f:
+            json.dump(meta, f, indent=4)
+        print("Updated into json")
+    except Exception as e:
+        print("Failed to save sync meta:", e)
+
+def get_local_modified_time(filepath):
+    return datetime.fromtimestamp(os.path.getmtime(filepath), tz=timezone.utc)
+
+
+def timestamps_close(t1, t2, tolerance_seconds=2):
+    delta = abs((t1 - t2).total_seconds())
+    return delta <= tolerance_seconds
+
+# ---------- Main sync function ----------
+ 
+def sync_now_to_drive():
+    sync_meta = load_sync_meta()
+    updated_meta = {}
+    all_synced = True  # Assume everything is synced unless proven otherwise
+
+    try:
+        print("🔄 2-Way Sync started...")
+        folder_path = LOCAL_FOLDER_PATH
+        service = authenticate()
+        drive_folder_id = get_or_create_main_folder(service)
+
+        drive_files = list_drive_files(service, drive_folder_id)
+        drive_file_map = {f["name"]: f for f in drive_files}
+
+        for root_dir, dirs, files in os.walk(folder_path):
+            if root_dir != folder_path:
+                print(f"⏭️ Skipped folder: {root_dir}")
+                continue
+
+            for filename in files:
+                if filename == ".syncmeta.json":
+                    continue
+
+                local_path = os.path.join(folder_path, filename)
+                local_time = get_local_modified_time(local_path)
+                drive_file = drive_file_map.get(filename)
+                
+                prev_entry = sync_meta.get(filename, {})
+                prev_local_time = parser.parse(prev_entry.get("local_modified")) if prev_entry.get("local_modified") else None
+                prev_drive_time = parser.parse(prev_entry.get("drive_modified")) if prev_entry.get("drive_modified") else None
+
+                if drive_file:
+                    drive_id = drive_file["id"]
+                    drive_time = parser.parse(drive_file["modifiedTime"])
+
+                    if local_time > drive_time and not timestamps_close(local_time, drive_time):
+                        print(f"🔼 Local newer → Uploading {filename}")
+                        all_synced = False
+                        uploaded = sync_upload_file(service, local_path, drive_folder_id, existing_drive_id=drive_id)
+                        updated_meta[filename] = {
+                            "local_modified": local_time.isoformat(),
+                            "drive_modified": uploaded["drive_modified"],
+                            "drive_id": uploaded["drive_id"]
+                        }
+
+                    elif drive_time > local_time and not timestamps_close(drive_time, local_time):
+                        print(f"🔽 Drive newer → Downloading {filename}")
+                        all_synced = False
+                        result = sync_download_files(service, drive_id, local_path)
+                        updated_meta[filename] = result
+
+                    else:
+                        print(f"✅ Up-to-date: {filename}")
+                        # Leave `all_synced` unchanged here to avoid false positive
+                        updated_meta[filename] = {
+                            "local_modified": local_time.isoformat(),
+                            "drive_modified": drive_time.isoformat(),
+                            "drive_id": drive_id
+                        }
+
+                else:
+                    print(f"🔼 Only on PC → Uploading {filename}")
+                    all_synced = False
+                    uploaded = sync_upload_file(service, local_path, drive_folder_id)
+                    updated_meta[filename] = {
+                        "local_modified": local_time.isoformat(),
+                        "drive_modified": uploaded["drive_modified"],
+                        "drive_id": uploaded["drive_id"]
+                    }
+
+        # Handle files only on Drive
+        for drive_file in drive_files:
+            filename = drive_file["name"]
+            local_file_path = os.path.join(folder_path, filename)
+            if not os.path.exists(local_file_path):
+                print(f"🔽 Only on Drive → Downloading {filename}")
+                all_synced = False
+                result = sync_download_files(service, drive_file["id"], local_file_path)
+                updated_meta[filename] = result
+
+        print("Updated meta content before saving:", updated_meta)
+        save_sync_meta(updated_meta)
+
+        print("✅ 2-Way Sync complete!")
+        return all_synced
+
+    except Exception as e:
+        print("❌ Sync failed:", e)
+        return True  # Fail safe: exit loop on error
+
+def sync_till_up_to_date():
+    print("I am till all file is up to date")
+    while True:
+        SyncStatus = sync_now_to_drive()
+        if SyncStatus:
+            break
+    
+    print("✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅")
+    messagebox.showinfo("Sync Completed", "All Files Have Been Synced")
+
+
+######
+
+auto_sync_enabled = True
+auto_sync_timer = None
+
+def main_api():
+    sync_interval_var = tk.StringVar(value="5 min")
+    auto_sync_enabled_var = tk.BooleanVar(value=True)
+
+    def show_files():
+        global service
+        folder_path = r"C:\Notes"
+        try:
+            files = os.listdir(folder_path)
+            files = [file for file in files if os.path.isfile(os.path.join(folder_path, file))]
+            file_listbox.delete(0, tk.END)
+            for file in files:
+                file_listbox.insert(tk.END, file)
+        except FileNotFoundError:
+            print("The folder path doesn't exist.")
+
+    drive_window = tk.Toplevel()
+    drive_window.title("Drive Panel")
+    drive_window.resizable(False, False)
+    drive_window.configure(bg="#f0f0f0")
+
+    # Title Label
+    tk.Label(
+        drive_window,
+        text="📁 Drive Control Panel",
+        font=("Helvetica", 14, "bold"),
+        bg="#f0f0f0",
+        fg="#000000"
+    ).pack(pady=(15, 10))
+
+    # Frame for buttons
+    button_frame = tk.Frame(drive_window)
+    button_frame.pack(pady=10)
+
+    # Buttons
+    SyncNow = tk.Button(button_frame, text="⬇️ Sync Now", command=sync_till_up_to_date, font=("Arial", 10),
+            bg="#e0e0e0",    # light gray background
+            fg="#000000",    # black text
+            relief="raised",
+            bd=2,
+            width=20,
+            height=2)
+    SyncNow.pack(pady=5)
+    
+    def open_drive():
+        webbrowser.open("https://drive.google.com/drive/my-drive")
+
+    ToDrive = tk.Button(button_frame, text="🌐 Go to Drive", command=open_drive, font=("Arial", 10),
+            bg="#e0e0e0",    # light gray background
+            fg="#000000",    # black text
+            relief="raised",
+            bd=2,
+            width=20,
+            height=2)
+    ToDrive.pack(pady=5)
+
+    ReloadFiles = tk.Button(button_frame, text="🔄 Reload", command=show_files, font=("Arial", 10),
+            bg="#e0e0e0",    # light gray background
+            fg="#000000",    # black text
+            relief="raised",
+            bd=2,
+            width=20,
+            height=2)
+    ReloadFiles.pack(pady=5)
+
+    # Footer
+    tk.Label(
+        drive_window,
+        text="Connected to Google Drive",
+        font=("Arial", 9, "italic"),
+        bg="#f0f0f0",
+        fg="#555555"
+    ).pack(pady=(15, 10))
+
+
+
+    SYNC_OPTIONS = {
+    "Every 10 min": 600,
+    "Every 30 min": 1800,
+    "Every 1 hour": 3600
+    }
+
+    sync_interval_var = tk.StringVar(value="Every 10 min")  # Default
+
+    # Interval dropdown
+    SyncTiming = ttk.OptionMenu(button_frame, sync_interval_var, sync_interval_var.get(), *SYNC_OPTIONS.keys())
+    SyncTiming.pack()
+
+
+
+    def start_auto_sync():
+        global auto_sync_timer
+
+        interval_label = sync_interval_var.get()
+        interval_seconds = SYNC_OPTIONS.get(interval_label, 0)
+
+        if interval_seconds == 0:
+            print("⛔ Auto-sync is OFF.")
+            return
+
+        if auto_sync_enabled:
+            print(f"⏳ Scheduled next auto-sync in {interval_seconds} seconds...")
+            auto_sync_timer = threading.Timer(interval_seconds, run_auto_sync)
+            auto_sync_timer.start()
+
+
+    def run_auto_sync():
+        try:
+            print("🔄 Auto-Sync triggered...")
+            sync_till_up_to_date() 
+        finally:
+            start_auto_sync()
+
+
+    from tkinter import BooleanVar, Checkbutton
+
+    auto_sync_enabled_var = BooleanVar(value=True)
+
+    def toggle_auto_sync():
+        global auto_sync_enabled, auto_sync_timer
+        auto_sync_enabled = auto_sync_enabled_var.get()
+        if auto_sync_enabled:
+            SyncTiming.config(state="normal")
+            start_auto_sync()
+            print("▶️ Auto-Sync Enabled")
+        else:
+            SyncTiming.config(state="disabled")  # Disable dropdown            
+            if auto_sync_timer:
+                auto_sync_timer.cancel()
+            print("⏸️ Auto-Sync Paused")
+
+    # Enable/disable checkbox
+    SyncAuto = tk.Checkbutton(button_frame, text="Auto-Sync", variable=auto_sync_enabled_var, command=toggle_auto_sync)
+    SyncAuto.pack()
+
+
+
+    def logout():
+        global service
+        print("Logging out...")
+        service = None
+        if os.path.exists("token.json"):
+            os.remove("token.json")
+        messagebox.showinfo("Logged Out", "You have been logged out successfully.")
+
+    def on_closing():
+        if messagebox.askyesno("Sign Out", "Are you sure you want to sign out?"):
+            logout()
+            LogOut.config(state="disabled")
+            messagebox.showinfo("Goodbye", "You have been signed out. You will need to sign in again next time.")
+            drive_window.destroy()
+        else:
+            drive_window.destroy()
+            main_api()
+
+
+        LogOut = ttk.Button(button_frame, text="🚪 Log Out", command=on_closing, font=("Arial", 10),
+            bg="#e0e0e0",    # light gray background
+            fg="#000000",    # black text
+            relief="raised",
+            bd=2,
+            width=20,
+            height=2)
+        LogOut.pack(pady=5)
+
+
+    show_files()
+
+def threaded_authenticate(callback):
+    global auth_window 
+
+    def worker():
+        global service
+        try:
+            service = authenticate()
+            root.after(0, lambda: finish_auth(callback))  # callback on main thread
+        except Exception as e:
+            print("Authentication failed:", e)
+            root.after(0, lambda: messagebox.showerror("Error", "Authentication failed. Please try again."))
+
+
+    threading.Thread(target=worker, daemon=True).start()
+
+def finish_auth(callback):
+    global auth_window
+    if auth_window is not None:
+        auth_window.destroy()
+        auth_window = None
+    callback()
+
+
+#note tab
+notes_tab = tk.Frame(notebook, bg=WHITE_BG)
+notebook.add(notes_tab, text="📝 Notes")
+
+# Search bar
+search_entry = tk.Entry(notes_tab, font=FONT_TEXT)
+search_entry.place(relx=0.1, rely=0.05, relwidth=0.5)
+search_entry.bind("<Return>", lambda event: perform_advanced_search())
+
+clear_search_button = ttk.Button(notes_tab, text="Clear Search", command=lambda: [search_entry.delete(0, tk.END), update_file_list()])
+clear_search_button.place(relx=0.62, rely=0.05, relwidth=0.15)
+
+btn_trash = ttk.Button(notes_tab, text="Trash Bin", command=lambda: open_trash_bin())
+btn_trash.place(relx=0.8, rely=0.05, relwidth=0.15)
+
+search_entry.bind("<KeyRelease>", lambda e: search_notes())
+
+# Listbox for files
+file_listbox = tk.Listbox(notes_tab, font=FONT_TEXT,bg="white")
+file_listbox.place(relx=0.05, rely=0.12, relwidth=0.4, relheight=0.8)
+
+# Button Frame
+note_btn_frame = tk.Frame(notes_tab, bg=WHITE_BG)
+note_btn_frame.place(relx=0.05, rely=0.01, relwidth=0.9)
+
+
+
+# Pinned notes treeview
+tree = ttk.Treeview(notes_tab, columns=("Pinned Notes",), show="headings")
+tree.heading("Pinned Notes", text="Pinned Notes")
+tree.place(relx=0.55, rely=0.12, relwidth=0.4, relheight=0.8)
+load_pinned_notes()
+
+file_listbox.bind("<Button-3>", show_listbox_menu)
+tree.bind("<Button-3>", show_tree_menu)
+btn_new = ttk.Button(note_btn_frame, text="New Note", command=run_notepad)
+btn_new.pack(side='left', padx=5)
+
+btn_open = ttk.Button(note_btn_frame, text="Open Note", command=open_file_button_clicked)
+btn_open.pack(side='left', padx=5)
+
+btn_delete = ttk.Button(note_btn_frame, text="Delete Note", command=lambda: deleting_notes())
+btn_delete.pack(side='left', padx=5)
+
+btn_export = ttk.Button(note_btn_frame, text="Export Notes", command=lambda: export_notes_with_format())
+btn_export.pack(side='left', padx=5)
+
+btn_drive = ttk.Button(note_btn_frame, text="Open Drive", command=main_api)
+btn_drive.pack(side="left", padx=5)
+
+listbox_menu = tk.Menu(card_frame, tearoff=0)# tear off is the dash line in the menu list
 listbox_menu.add_command(label="Pin", command=lambda: pin_selected_note())
 listbox_menu.add_command(label="Unpin", command=lambda: unpin_selected_note())
 
-
-
-#show the frame at the top
-top_frame = tk.Frame(root, bg="dark blue", height=50)
-top_frame.pack(side="top", fill="x")
-
-# show the searchbar in the frame
-search_entry = tk.Entry(top_frame, width=50, font=('Aptos', 15))
-search_entry.bind("<Return>", lambda event: perform_advanced_search())
-
-# show the sidebar
-sidebar = tk.Frame(root, width=120, bg="#f1efec")
-sidebar.pack(side="left", fill="y")
-
-content_area = tk.Frame(root, bg="white")
-content_area.pack(expand=True, fill="both")
-
-# Create different frames for each own section
-home_frame = tk.Frame(content_area, bg="white")
-home_scroll= ttk.Scrollbar(home_frame)
-home_scroll.pack(side="right",fill="y",expand= True)
-
-timer_frame = tk.Frame(content_area, bg="white")
-calendar_frame = tk.Frame(content_area, bg="white")
-todolist_frame = tk.Frame(content_area, bg="white")
-
-for frame in (home_frame, timer_frame, calendar_frame, todolist_frame):
-    frame.place(relwidth=1, relheight=1)
-
-#Buttons for Navigation
-nav_buttons = [
-    ("Note", home_frame),
-    ("Timer", timer_frame),
-    ("Calendar", calendar_frame),
-    ("To-do-list", todolist_frame)
-]
-    #button features
-for text, frame in nav_buttons:
-    btn = tk.Button(sidebar, text=text,
-    font=("Segoe UI", 12, "bold"),  # System-like font
-    bg="#1d72e8",  # Primary blue
-    fg="white",  # White text
-    activebackground="#155cc1",  # Pressed color
-    activeforeground="white",
-    relief="flat",  # Flat, modern look
-    padx=20,
-    pady=10,
-    bd=0 ,command=lambda f=frame: show_frame(f))
-    btn.pack(fill="x", padx=20, pady=20, ipady="15")
-
-
-
-
-##section note
-#show the location and the feature of the fonts showed
-note_lbl= tk.Label(home_frame, text="All Note",font=('Arial',30),bg="white")
-note_lbl.place(x=15,y=0)
-
-file_listbox = tk.Listbox(home_frame, width=221,height=20)
-file_listbox.pack(padx=5,pady=50)
-
-
-tree_menu = tk.Menu(root, tearoff=0)
+tree_menu = tk.Menu(card_frame, tearoff=0)
 tree_menu.add_command(label="Unpin", command=lambda: unpin_from_tree())
 
-file_listbox.bind("<Button-3>", show_listbox_menu)# the right click function and bind with the show_list_menu function
-search_entry.bind("<KeyRelease>", search_notes)
-clear_search_button = tk.Button(top_frame, text="Clear", command=clear_search)
-clear_search_button.place(relx=0.9, rely=0.5, anchor="center")  # Position it next to the search bar
+def on_closing():
+    save_pinned_notes()
+    root.destroy()
+
+root.protocol("WM_DELETE_WINDOW", on_closing)
+
+#calanedr section
+calendar_tab = tk.Frame(notebook, bg=WHITE_BG)
+notebook.add(calendar_tab, text="📅 Calendar")
+
+# Bigger calendar
+cal = Calendar(calendar_tab, selectmode='day', date_pattern='yyyy-mm-dd',
+               font=("Arial", 14))  # Larger font
+cal.pack(pady=20, ipadx=10, ipady=10)  # Increased padding
+
+# Multiline remark input
+remark_text = tk.Text(calendar_tab, width=50, height=6, font=("Arial", 12))
+remark_text.pack(pady=10)
+
+# Theme function
+def choose_calendar_color():
+    color = colorchooser.askcolor(title="Choose Calendar Color")[1]
+    if color:
+        cal.config(
+            background=color,
+            headersbackground=color,
+            disabledbackground=color,
+            normalbackground=color,
+            weekendbackground=color,
+            selectbackground=color,
+            selectforeground="white",
+        )
+
+def apply_theme(choice):
+    if choice == "Custom":
+        choose_calendar_color()
+    elif choice == "Pink":
+        cal.config(
+            background="#FFE4E1",
+            headersbackground="#FFB6C1",
+            disabledbackground="#FFE4E1",
+            normalbackground="#FFE4E1",
+            weekendbackground="#FFD1DC",
+            selectbackground="#FF69B4",
+            selectforeground="white",
+        )
+    elif choice == "Blue":
+        cal.config(
+            background="#E0FFFF",
+            headersbackground="#87CEFA",
+            disabledbackground="#E0FFFF",
+            normalbackground="#E0FFFF",
+            weekendbackground="#ADD8E6",
+            selectbackground="#00BFFF",
+            selectforeground="white",
+        )
+    elif choice == "Purple":
+        cal.config(
+            background="#E6E6FA",
+            headersbackground="#D8BFD8",
+            disabledbackground="#E6E6FA",
+            normalbackground="#E6E6FA",
+            weekendbackground="#D8BFD8",
+            selectbackground="#9370DB",
+            selectforeground="white",
+        )
+
+# Save/load remarks
+def highlight_remark_dates():
+    cal.calevent_remove('all')  # clear previous events/highlights
+
+    for date_str, remark in remarks.items():
+        tag = None
+        if "#low" in remark:
+            tag = 'low'
+        elif "#medium" in remark:
+            tag = 'medium'
+        elif "#high" in remark:
+            tag = 'high'
+
+        if tag:
+            try:
+                # Convert date string to datetime.date object
+                date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+                # Add a calendar event with the tag (color)
+                cal.calevent_create(date_obj, remark, tag)
+            except Exception as e:
+                print(f"Could not tag date {date_str}: {e}")
+
+def load_remarks():
+    if os.path.exists(remark_file):
+        with open(remark_file, "r") as f:
+            for line in f:
+                if "|" in line:
+                    date, remark = line.strip().split("|", 1)
+                    remarks[date] = remark
+    highlight_remark_dates()
+
+def save_remarks():
+    try:
+        with open(remark_file, "w") as f:
+            for date, remark in remarks.items():
+                f.write(f"{date}|{remark}\n")
+        highlight_remark_dates()
+    except FileNotFoundError:
+        print("error")
+
+
+# Save remark for selected date
+def save_remark_for_date():
+    selected_date = cal.get_date()
+    remark = remark_text.get("1.0", tk.END).strip()
+
+    if not remark:
+        messagebox.showwarning("Empty", "Please enter a remark.")
+        return
+
+    def open_importance_popup():
+        popup = tk.Toplevel()
+        popup.title("Select Importance")
+        popup.geometry("250x200")
+
+        tk.Label(popup, text="Select importance level:", font=("Arial", 12)).pack(pady=10)
+
+        importance_var = tk.StringVar(value="None")
+
+        tk.Radiobutton(popup, text="Low", variable=importance_var, value="#low").pack(anchor="w", padx=20)
+        tk.Radiobutton(popup, text="Medium", variable=importance_var, value="#medium").pack(anchor="w", padx=20)
+        tk.Radiobutton(popup, text="High", variable=importance_var, value="#high").pack(anchor="w", padx=20)
+        tk.Radiobutton(popup, text="None", variable=importance_var, value="None").pack(anchor="w", padx=20)
+
+        def confirm_importance():
+            tag = importance_var.get()
+            final_remark = remark + (f" {tag}" if tag != "None" else "")
+            remarks[selected_date] = final_remark
+            save_remarks()
+            highlight_remark_dates()
+            popup.destroy()
+            messagebox.showinfo("Saved", f"Remark for {selected_date} saved.")
+
+        tk.Button(popup, text="Save", command=confirm_importance).pack(pady=10)
+
+    open_importance_popup()
+
+# Display saved remark for selected date
+def display_remark_for_date(event=None):
+    selected_date = cal.get_date()
+    remark_text.delete("1.0", tk.END)
+    if selected_date in remarks:
+        remark_text.insert("1.0", remarks[selected_date])
+
+def view_all_remarks():
+    if not remarks:
+        messagebox.showinfo("Remarks", "No saved remarks.")
+        return
+    remark_window = tk.Toplevel()
+    remark_window.title("All Remarks")
+    remark_window.geometry("400x300")
+
+    text_widget = tk.Text(remark_window, wrap="word", font=("Arial", 12))
+    text_widget.pack(expand=True, fill="both", padx=10, pady=10)
+
+    for date, remark in sorted(remarks.items()):
+        text_widget.insert(tk.END, f"{date}: {remark}\n\n")
+
+def clear_remark_for_date():
+    selected_date = cal.get_date()
+    remark_text.delete("1.0", tk.END)
+    if selected_date in remarks:
+        del remarks[selected_date]  # Remove the saved remark
+        save_remarks()  # Save updated remarks to file
+    messagebox.showinfo("Cleared", f"Remark for {selected_date} cleared.")
+    highlight_remark_dates()
+
+button_frame = tk.Frame(calendar_tab, bg=WHITE_BG)
+button_frame.pack(pady=10)
+
+save_button = tk.Button(button_frame, text="💾 Save Remark", command=save_remark_for_date)
+save_button.grid(row=0, column=0, padx=5)
+
+clear_button = tk.Button(button_frame, text="🧹 Clear Remark", command=clear_remark_for_date)
+clear_button.grid(row=0, column=1, padx=5)
+
+theme_button = tk.Menubutton(button_frame, text="🎨 Theme", relief=tk.RAISED)
+theme_menu = tk.Menu(theme_button, tearoff=0)
+theme_menu.add_command(label="Pink", command=lambda: apply_theme("Pink"))
+theme_menu.add_command(label="Blue", command=lambda: apply_theme("Blue"))
+theme_menu.add_command(label="Purple", command=lambda: apply_theme("Purple"))
+theme_menu.add_command(label="Custom", command=lambda: apply_theme("Custom"))
+theme_button.config(menu=theme_menu)
+theme_button.grid(row=0, column=2, padx=5)
+
+view_all_button = tk.Button(button_frame, text="📋 View All Remarks", command=view_all_remarks)
+view_all_button.grid(row=0, column=3, padx=5)
+
+cal.tag_config('low', background='lightgreen')
+cal.tag_config('medium', background='orange')
+cal.tag_config('high', background='red')
+# Bind calendar selection to display remark
+cal.bind("<<CalendarSelected>>", display_remark_for_date)
+
+
+# Load saved remarks on startup
+load_remarks()
+card1 = create_feature_card(card_frame, "⏲", "Timer", "Stay calm and focused in your study with the timer.", 1)
+card2 = create_feature_card(card_frame, "✅", "To-Do List", "Organize tasks and boost daily productivity.", 2)
+card3 = create_feature_card(card_frame, "📝", "Notes", "Write, pin, search, and export your study notes.", 3)
+card4 = create_feature_card(card_frame, "📅", "Calendar", "Attach notes or events to any calendar date.", 4)
+
+card1.grid(row=0, column=0, padx=15, pady=15)
+card2.grid(row=0, column=1, padx=15, pady=15)
+card3.grid(row=0, column=2, padx=15, pady=15)
+card4.grid(row=0, column=3, padx=15, pady=15)
+
+populate_pinned_preview(pinned_preview_frame)
 
 update_file_list()
-
-#three button for the new, open, delete function
-button_frame = tk.Frame(home_frame, bg="white")
-button_frame.pack(pady=15)
-
-btn_new = tk.Button(button_frame, text="New", font=25, relief="flat", width=20, height=3, command=run_notepad)
-btn_new.pack(side="left", padx=20)
-
-btn_open = tk.Button(button_frame, text="Open", font=25, relief="flat", width=20, height=3, command=open_file_button_clicked)
-btn_open.pack(side="left", padx=20)
-
-btn_delete = tk.Button(button_frame, text="Delete", font=25, relief="flat", width=20, height=3,command=deleting_notes)
-btn_delete.pack(side="left", padx=20)
-
-btn_export = tk.Button(button_frame, text="Export All Notes", font=25, relief="flat", width=20, height=3, command=export_notes_with_format)
-btn_export.pack(side="left", padx=20)# Adjust as needed
-
-
-
-pinnednote_lbl= tk.Label(home_frame, text="Pinned Note",bg="white",font=('Arial',25))
-pinnednote_lbl.place(x=15,y=550)
-
-
-#create a box for the pinned note
-tree = ttk.Treeview(home_frame, columns=("Name",), show="headings", height=10)
-tree.heading("Name", text="File Name",)
-tree.column("Name", width=1325)
-tree.place(x=20, y=600)
-tree.bind("<Button-3>", show_tree_menu)
-load_pinned_notes()
-
-
-
-#timer section
-timer_lbl= tk.Label(timer_frame, text="Timer Section", font=("Arial", 30), bg="white")
-timer_lbl.place(x=0,y=0)
-
-#calendar section
-calendar_lbl= tk.Label(calendar_frame,text="Calendar",bg="white",font=('Arial',30))
-calendar_lbl.place(x=0,y=0)
-setup_calendar()
-
-theme_var = tk.StringVar()
-theme_var.set("Choose Theme")  # Default text
-
-theme_options = ["Pink", "Blue", "Purple", "Custom"]
-
-theme_menu = tk.OptionMenu(calendar_frame, theme_var, *theme_options, command=apply_theme)
-theme_menu.config(font=("Arial", 12), bg="#f0f0f0")
-theme_menu.pack(pady=10)
-
-remark_entry = tk.Entry(calendar_frame, font=("Arial", 14), width=50)
-remark_entry.pack(pady=10)
-save_btn = tk.Button(calendar_frame, text="Save Remark", command=save_remark_for_date, font=("Arial", 12))
-save_btn.pack(pady=5)
-cal.bind("<<CalendarSelected>>", display_remark_for_date)
-load_remarks()
-
-
-
-
-#todolist section
-todolist_lbl= tk.Label(todolist_frame,text="To- Do-List",bg="white", font=('Arial',30))
-todolist_lbl.place(x=0,y=0)
-
-
-show_frame(home_frame)
-
+check_reminders_on_startup()
 root.mainloop()
 
 
