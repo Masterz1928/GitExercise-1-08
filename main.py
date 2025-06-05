@@ -1,9 +1,10 @@
 import tkinter as tk
 import time 
 from tkinter import StringVar, messagebox, filedialog
-import winsound
+#import winsound
 import pygame
 import os
+from plyer import notification
 
 #git add .
 #git commit -m "name"
@@ -15,7 +16,7 @@ root.geometry("800x800")
 
 pygame.mixer.init()
 
-#display clock
+#Fdisplay clock
 def clock():
     hour = time.strftime("%H")
     minute = time.strftime("%M")
@@ -42,9 +43,22 @@ purpose = StringVar(root, "")
 main_label = tk.Label(root, text="Set the time")
 main_label.pack()
 
-timeinput_frame =tk.LabelFrame(root)
+timeinput_frame = tk.LabelFrame(root)
 timeinput_frame.pack(pady=10)
 
+#input
+hoursentry = tk.Entry(timeinput_frame, width=2, textvariable=hours, font=("arial", 18))
+hoursentry.pack(side=tk.LEFT)
+separatorlabel = tk.Label(timeinput_frame, text=":")
+separatorlabel.pack(side=tk.LEFT)
+minsentry = tk.Entry(timeinput_frame, width=2, textvariable=mins, font=("arial", 18))
+minsentry.pack(side=tk.LEFT)
+separatorlabel2= tk.Label(timeinput_frame, text=":")
+separatorlabel2.pack(side=tk.LEFT)
+secsentry = tk.Entry(timeinput_frame, width=2, textvariable=secs, font=("arial", 18))
+secsentry.pack(side=tk.LEFT)
+
+#Frame for preset buttons
 preset_frame = tk.Frame(root)
 preset_frame.pack(pady=10)
 
@@ -54,33 +68,21 @@ def set_preset_time(h, m, s):
     secs.set(f"{s:02}")
 
 #Create preset buttons
-preset_5min = tk.Button(preset_frame, text="5 mins")
+preset_5min = tk.Button(preset_frame, text="5 min")
 preset_5min.config(command=lambda: set_preset_time(0, 5, 0))
 preset_5min.pack(side=tk.LEFT, padx=5)
 
-preset_10min = tk.Button(preset_frame, text="10 mins")
+preset_10min = tk.Button(preset_frame, text="10 min")
 preset_10min.config(command=lambda: set_preset_time(0, 10, 0))
 preset_10min.pack(side=tk.LEFT, padx=5)
 
-preset_25min = tk.Button(preset_frame, text="25 mins")
+preset_25min = tk.Button(preset_frame, text="25 min")
 preset_25min.config(command=lambda: set_preset_time(0, 25, 0))
 preset_25min.pack(side=tk.LEFT, padx=5)
 
 preset_1hour = tk.Button(preset_frame, text="1 hour")
 preset_1hour.config(command=lambda: set_preset_time(1, 0, 0))
 preset_1hour.pack(side=tk.LEFT, padx=5)
-
-#input
-hoursentry = tk.Entry(timeinput_frame, width=2, textvariable=hours, font=("arial", 18))
-hoursentry.pack(side =tk.LEFT)
-separatorlabel = tk.Label(timeinput_frame, text=":")
-separatorlabel.pack(side =tk.LEFT)
-minsentry = tk.Entry(timeinput_frame, width=2, textvariable=mins, font=("arial", 18))
-minsentry.pack(side =tk.LEFT)
-separatorlabel2= tk.Label(timeinput_frame, text=":")
-separatorlabel2.pack(side =tk.LEFT)
-secsentry = tk.Entry(timeinput_frame, width=2, textvariable=secs, font=("arial", 18))
-secsentry.pack(side =tk.LEFT)
 
 purpose_label = tk.Label(root, text="Purpose")
 purpose_label.pack()
@@ -90,17 +92,18 @@ purpose_entry.pack()
 timers_frame = tk.Frame(root)
 timers_frame.pack(pady=20)
 
+#checking input validation
 def inputvalidation():
     try:
 
         if  int(secs.get()) < 0 or int(secs.get()) > 59:
-            messagebox.showerror("invalid input", "It must be smaller than 59 or greater than 0")
+            messagebox.showerror("invalid input", "It must be between 0 to 59")
             return False
         if int(mins.get()) < 0 or int(mins.get()) > 59:
-            messagebox.showerror("invalid input", "It must be smaller than 59 or greater than 0")
+            messagebox.showerror("invalid input", "It must be between 0 to 59")
             return False
         if int(hours.get()) < 0 or int(hours.get()) > 99:
-            messagebox.showerror("invalid input", "It must be smaller than 100 or greater than 0")
+            messagebox.showerror("invalid input", "It must be between 0 to 99")
             return False
         if hours.get() == "00" and mins.get() == "00" and secs.get() == "00":
            messagebox.showerror("Invalid Time", "Time must be greater than 00:00:00.")
@@ -108,7 +111,7 @@ def inputvalidation():
      
         return True
     except ValueError:
-        messagebox.showerror("Invalid Input","Ah boi do uk how to use a timer")
+        messagebox.showerror("Invalid Input", "Please enter valid numbers for hours, minutes, and seconds.")
         return False
 
 #timer function
@@ -157,7 +160,15 @@ def timer():
                     print("Error playing sound:", e)
             else:
                 print("No sound file selected or path invalid.")
-            messagebox.showinfo("ALERT", f"TIMES UP for '{purpose_text}'")
+
+            if show_notification.get():
+                notification.notify(
+                    title="Timer Finished",
+                    message=f"Time's up for '{purpose_text}'",
+                    timeout=3
+                )
+                messagebox.showinfo("ALERT", f"TIMES UP for '{purpose_text}'")
+
 
     def pause():
         paused[0] = True
@@ -233,8 +244,16 @@ def choose_sound():
         with open("alarmpath.txt", "w") as f:
             f.write(file)
 
-select_button = tk.Button(root, text="🎵 Choose Alarm Sound", command=choose_sound)
-select_button.place(relx=1.0, rely=1.0, x=-10, y=-10, anchor="se")
+show_notification = tk.BooleanVar(value=True)
+
+options_frame = tk.Frame(root)
+options_frame.place(relx=1.0, rely=1.0, x=-10, y=-10, anchor="se")
+
+select_button = tk.Button(options_frame, text="🎵 Choose Alarm Sound", command=choose_sound)
+select_button.pack(side=tk.LEFT)
+
+notify_checkbox = tk.Checkbutton(options_frame, text="Notification PoPup", variable=show_notification)
+notify_checkbox.pack(side=tk.LEFT, padx=10)
 
 
 clock()
