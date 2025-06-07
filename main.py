@@ -44,8 +44,8 @@ def addtask(event = None):
         else:                                                                                   
             task_tree.insert("", "end", values=("☐", date, task, priority), tags=(priority))   #add task to list 
             task_entry.delete(0, tk.END)                                                       #delete entry after task added  
-        
         tdl_task()                                                                             #save to txt file
+        temp_message("Task marked as completed!")
 
 #delete task function
 def deletetask():
@@ -59,6 +59,7 @@ def deletetask():
              messagebox.showerror("Error","No task selected")                                   #if didnt select task
 
         tdl_task()                                                                              #update the txt file
+        temp_message("Task deleted!")
 
 completed_task = []                                                                             #list to hold completed tasks
 
@@ -75,6 +76,7 @@ def togglecheckbox(event):
     
     tdl_task()
     tracker_task()
+    temp_message("Task marked as completed!")
 
 completed_tasktree = None                                                                       #global the treeview
 
@@ -96,9 +98,13 @@ def undo_completedtask(event):
     
     tdl_task()
     tracker_task()
+    temp_message("Task restored!")
 
 button_frame = tk.Frame(root)
 button_frame.pack(pady=10, fill="x")
+
+message_label = tk.Label(root, text="", fg="green", font=("Arial", 10))
+message_label.pack(pady=(0, 5))
 
 addtask_btn = tk.Button(button_frame, text="Add Task", command=addtask)
 addtask_btn.pack(side="left", padx=10, pady=5) 
@@ -234,6 +240,10 @@ def sorting(tree, col, descending):
             arrow = " ↓" if descending else " ↑"
         sort_states[col] = not descending                                              
         tree.heading(colname, text=colname + arrow, command=lambda c=colname: sorting(tree, c, sort_states.get(c, False))) #update the heading
+
+def temp_message(message):
+    message_label.config(text=message)
+    root.after(1500, lambda: message_label.config(text=""))
 
 load_txt()
 root.mainloop()
