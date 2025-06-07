@@ -126,7 +126,7 @@ def fade_in(widget, delay=250, steps=10):
 
     def step(i=0):
         if i < len(colors):
-            widget.configure(foreground=colors[i])
+            widget.configure(foreground=colors[i])# color change to show the fade in effect
             widget.after(delay, step, i + 1)
 
     step()
@@ -152,8 +152,8 @@ def get_pinned_notes_from_txt():
         return []
 
 def populate_pinned_preview(parent_frame):
-    for widget in parent_frame.winfo_children():
-        widget.destroy()
+    for widget in parent_frame.winfo_children():#get information feature in parent frame
+        widget.destroy()#prevent duplicate frame
 
     tk.Label(parent_frame, text="📌 Pinned Notes", font=("Arial", 12, "bold")).pack(anchor="w", padx=10, pady=(5, 0))
 
@@ -215,20 +215,30 @@ def update_file_list():
         file_listbox.insert(tk.END, file)
 
 def search_notes():
-    search_term = search_entry.get().lower()
+    search_term = search_entry.get().lower().strip()
     file_listbox.delete(0, tk.END)
     files = [f for f in os.listdir(folder_path) if f.endswith((".txt", ".md", ".html"))]
 
+    shown_files = set()  # To prevent duplicates
+
     for file in files:
         file_path = os.path.join(folder_path, file)
+
+        file_name_match = search_term in file.lower()
+        content_match = False
+
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read().lower()
-            if search_term in content:
-                file_listbox.insert(tk.END, file)
+                content_match = search_term in content
         except Exception as e:
-            # Optional: handle unreadable files gracefully
             print(f"Could not read {file}: {e}")
+            continue
+
+        # Show if either file name or content matches (but only once)
+        if (file_name_match or content_match) and file not in shown_files:
+            file_listbox.insert(tk.END, file)
+            shown_files.add(file)
 
 def perform_advanced_search():
     query = search_entry.get().strip().lower()
@@ -237,21 +247,30 @@ def perform_advanced_search():
         return
 
     results = []
+    matched_files = set()
 
     # Search in file names and contents
     for file_name in os.listdir(folder_path):
         if file_name.endswith(".txt"):
             file_path = os.path.join(folder_path, file_name)
 
-            # Match file name
-            if query in file_name.lower():
-                results.append(f"File Name Match: {file_name}")
+            name_match = query in file_name.lower()
+            content_match = False
 
-            # Match file content
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-                if query in content.lower():
-                    results.append(f"Content Match in {file_name}")
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    content_match = query in content.lower()
+            except Exception as e:
+                print(f"Could not read {file_name}: {e}")
+                continue
+
+            if name_match and content_match:
+                results.append(f"Match in File: {file_name} (name + content)")
+            elif name_match:
+                results.append(f"File Name Match: {file_name}")
+            elif content_match:
+                results.append(f"Content Match in {file_name}")
 
     # Search in calendar remarks
     for date_str, remark in remarks.items():
