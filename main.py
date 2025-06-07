@@ -244,6 +244,17 @@ def choose_sound():
         with open("alarmpath.txt", "w") as f:
             f.write(file)
 
+def preview_sound():
+    if os.path.exists(sound_path.get()):
+        try:
+            pygame.mixer.music.load(sound_path.get())
+            pygame.mixer.music.play()
+        except Exception as e:
+            messagebox.showerror("Sound Error", f"Could not play the sound.\n{e}")
+    else:
+        messagebox.showwarning("No Sound", "Please select a valid sound file first.")
+
+
 show_notification = tk.BooleanVar(value=True)
 
 options_frame = tk.Frame(root)
@@ -251,6 +262,10 @@ options_frame.place(relx=1.0, rely=1.0, x=-10, y=-10, anchor="se")
 
 select_button = tk.Button(options_frame, text="🎵 Choose Alarm Sound", command=choose_sound)
 select_button.pack(side=tk.LEFT)
+
+preview_button = tk.Button(options_frame, text="🔊 Preview", command=preview_sound)
+preview_button.pack(side=tk.LEFT, padx=5)
+
 
 notify_checkbox = tk.Checkbutton(options_frame, text="Notification PoPup", variable=show_notification)
 notify_checkbox.pack(side=tk.LEFT, padx=10)
