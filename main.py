@@ -59,7 +59,7 @@ def deletetask():
              messagebox.showerror("Error","No task selected")                                   #if didnt select task
 
         tdl_task()                                                                              #update the txt file
-        temp_message("Task deleted!")
+        temp_message("Task deleted!", color="red")
 
 completed_task = []                                                                             #list to hold completed tasks
 
@@ -98,7 +98,7 @@ def undo_completedtask(event):
     
     tdl_task()
     tracker_task()
-    temp_message("Task restored!")
+    temp_message("Task restored!", color="red")
 
 button_frame = tk.Frame(root)
 button_frame.pack(pady=10, fill="x")
@@ -241,8 +241,8 @@ def sorting(tree, col, descending):
         sort_states[col] = not descending                                              
         tree.heading(colname, text=colname + arrow, command=lambda c=colname: sorting(tree, c, sort_states.get(c, False))) #update the heading
 
-def temp_message(message):
-    message_label.config(text=message)
+def temp_message(message, color="green"):
+    message_label.config(text=message, fg=color)
     root.after(1500, lambda: message_label.config(text=""))
 
 load_txt()
