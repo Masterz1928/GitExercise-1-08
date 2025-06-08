@@ -722,7 +722,6 @@ def apply_dark_mode():
 
     # Update theme for calendar too if needed
     cal.configure(background=DARK_BG, foreground=DARK_TEXT, selectbackground="#666666", headersbackground="#444444")
-    highlight_remark_dates()
     # Treeview dark style
     style = ttk.Style()
     style.theme_use("default")
@@ -745,6 +744,7 @@ def apply_dark_mode():
     saved_theme = load_color()# make sure the color of calendar not influenced by the wdw color change
     if saved_theme:
         cal.config(**saved_theme)
+    highlight_remark_dates()
 
 def apply_light_mode():
     global CURRENT_BG, CURRENT_TEXT, CURRENT_ENTRY_BG
