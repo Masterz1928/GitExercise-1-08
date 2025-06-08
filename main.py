@@ -719,8 +719,10 @@ def apply_dark_mode():
     search_entry.configure(bg=CURRENT_ENTRY_BG, fg=CURRENT_TEXT, insertbackground=CURRENT_TEXT)
     remark_text.configure(bg=CURRENT_ENTRY_BG, fg=CURRENT_TEXT, insertbackground=CURRENT_TEXT)
 
+
     # Update theme for calendar too if needed
     cal.configure(background=DARK_BG, foreground=DARK_TEXT, selectbackground="#666666", headersbackground="#444444")
+    highlight_remark_dates()
     # Treeview dark style
     style = ttk.Style()
     style.theme_use("default")
@@ -761,6 +763,7 @@ def apply_light_mode():
 
     # Restore calendar appearance
     cal.configure(background="white", foreground="black", selectbackground="#a7c7e7", headersbackground="#cfe2ff")
+    highlight_remark_dates()
     #light theme treeview
     style = ttk.Style()
     style.configure("Treeview",
@@ -803,12 +806,16 @@ def save_theme_mode():
 #get the information from txt file and load it
 def load_theme_mode():
     global current_mode
-    with open(wdw_color, "r") as f:
-        mode = f.read().strip().lower()
-        if mode in ["light", "dark"]:
-            current_mode = mode
-        else:
-            current_mode = "light"
+    try:
+        with open(wdw_color, "r") as f:
+            mode = f.read().strip().lower()
+            if mode in ["light", "dark"]:
+                current_mode = mode
+            else:
+                current_mode = "light"
+    except FileNotFoundError:
+        with open(wdw_color, "w") as f:
+            f.write(current_mode)
 
 #notebook area
 notebook_frame = tk.Frame(root, bg=WHITE_BG)
@@ -1772,9 +1779,14 @@ def apply_theme(choice):
         save_color(theme_data)
 
 # Save/load remarks
+def reapply_remark_tags():
+    cal.tag_config('low', background='green', foreground='white')
+    cal.tag_config('medium', background='orange', foreground='white')
+    cal.tag_config('high', background='red', foreground='white')
+
 def highlight_remark_dates():
     cal.calevent_remove('all')  # clear previous events/highlights
-
+    reapply_remark_tags()
     for date_str, remark in remarks.items():
         tag = None
         if "#low" in remark:
@@ -1787,11 +1799,12 @@ def highlight_remark_dates():
         if tag:
             try:
                 # Convert date string to datetime.date object
-                date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+                date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
                 # Add a calendar event with the tag (color)
                 cal.calevent_create(date_obj, remark, tag)
             except Exception as e:
                 print(f"Could not tag date {date_str}: {e}")
+    
 
 def load_remarks():
     if os.path.exists(remark_file):
@@ -1929,4 +1942,3 @@ populate_pinned_preview(pinned_preview_frame)
 update_file_list()
 check_reminders_on_startup()
 root.mainloop()
-
