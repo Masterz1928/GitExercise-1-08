@@ -45,7 +45,7 @@ def addtask(event = None):
             task_tree.insert("", "end", values=("☐", date, task, priority), tags=(priority))   #add task to list 
             task_entry.delete(0, tk.END)                                                       #delete entry after task added  
         tdl_task()                                                                             #save to txt file
-        temp_message("Task marked as completed!")
+        temp_message("Task added!")
 
 #delete task function
 def deletetask():
@@ -65,6 +65,10 @@ completed_task = []                                                             
 
 #toggle function
 def togglecheckbox(event):
+    region = task_tree.identify("region", event.x, event.y)
+    if region != "cell":
+        return
+    
     selected = task_tree.selection()                                                            #get task              
     if selected:
         for task in selected:
