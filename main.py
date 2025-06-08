@@ -814,8 +814,7 @@ def load_theme_mode():
             else:
                 current_mode = "light"
     except FileNotFoundError:
-        with open(wdw_color, "w") as f:
-            f.write(current_mode)
+        None
 
 #notebook area
 notebook_frame = tk.Frame(root, bg=WHITE_BG)
