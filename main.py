@@ -1,16 +1,38 @@
 import tkinter as tk
 from tkcalendar import Calendar
-from tkinter import ttk,messagebox,colorchooser, filedialog
-from datetime import date,datetime
+from tkinter import ttk,messagebox,colorchooser, filedialog, StringVar
 import zipfile
 from tkhtmlview import HTMLLabel
 import markdown
 import re
 from bs4 import BeautifulSoup
 import os
-import time
-import winsound
-from tkinter import StringVar
+from pathlib import Path
+from datetime import date, datetime, timedelta, timezone
+import os.path
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+from tkinter import ttk, messagebox
+import tkinter as tk
+import threading 
+from dateutil import parser
+import pygame
+from plyer import notification
+import time 
+
+pygame.mixer.init()
+
+folder_path = r"C:\Notes"
+
+try:
+    os.makedirs(folder_path, exist_ok=True)
+    print(f"Folder '{folder_path}' created successfully!")
+except Exception as e:
+    print(f"An error occurred: {e}")
 
 def run_notepad(file_content=""):
     global Text_Box
@@ -321,7 +343,7 @@ def run_notepad(file_content=""):
         notebook.add(tab3, text="Preview")
         
         Tab3Text = tk.Label(tab3, text=(
-            "• Preview updates automatically on save.\n"
+            "• Preview updates automatically on after typing.\n"
             "• Supports Markdown and HTML preview.\n"
             "• Some advanced tags may not render fully."
         ), justify="left", padx=10, pady=10)
@@ -641,8 +663,20 @@ root.geometry("900x600")
 root.configure(bg=WHITE_BG)
 root.minsize(700, 500)
 
-icon = tk.PhotoImage(file=r"C:\Users\ASUS\project\pythonfile\Mini_IT_Project-1-08\025.png")  # Use a PNG file
-root.iconphoto(False, icon)
+def get_icon():
+    # Get current script folder
+    base_dir = Path(__file__).parent.resolve()
+    icon_path = base_dir / "025.png"
+
+    if icon_path.exists():
+        return tk.PhotoImage(file=icon_path)
+    else:
+        print("Icon file not found.")
+        return None
+icon = get_icon()
+if icon:
+    root.iconphoto(False, icon)
+
 
 top_frame = tk.Frame(root, bg=BLUE_BG, height=60)  # Use new blue background
 top_frame.pack(fill='x')
@@ -657,7 +691,6 @@ logo_label.pack(side='left', padx=20, pady=10)
 
 #notebook tab style
 style = ttk.Style()
-style.theme_use('default')
 style.configure('TNotebook', background=WHITE_BG, borderwidth=0)
 style.configure('TNotebook.Tab',
                 background=BLUE_ACCENT,
@@ -800,9 +833,11 @@ def create_feature_card(parent, icon, title, desc, tab_index):
     return card
 
 
-# tabs for Timer
+# Placeholder tabs for Timer and To-Do for now
 timer_tab = tk.Frame(notebook, bg=WHITE_BG)
 notebook.add(timer_tab, text="⏲ Timer")
+
+#Fdisplay clock
 def clock():
     hour = time.strftime("%H")
     minute = time.strftime("%M")
@@ -824,25 +859,52 @@ hours = StringVar(value="00")
 mins = StringVar(value="00")
 secs = StringVar(value="00")
 
+#get purpose
 purpose = StringVar(timer_tab, "")
 
 main_label = tk.Label(timer_tab, text="Set the time")
 main_label.pack()
 
-timeinput_frame =tk.LabelFrame(timer_tab)
+timeinput_frame = tk.LabelFrame(timer_tab)
 timeinput_frame.pack(pady=10)
 
 #input
 hoursentry = tk.Entry(timeinput_frame, width=2, textvariable=hours, font=("arial", 18))
-hoursentry.pack(side =tk.LEFT)
+hoursentry.pack(side=tk.LEFT)
 separatorlabel = tk.Label(timeinput_frame, text=":")
-separatorlabel.pack(side =tk.LEFT)
+separatorlabel.pack(side=tk.LEFT)
 minsentry = tk.Entry(timeinput_frame, width=2, textvariable=mins, font=("arial", 18))
-minsentry.pack(side =tk.LEFT)
+minsentry.pack(side=tk.LEFT)
 separatorlabel2= tk.Label(timeinput_frame, text=":")
-separatorlabel2.pack(side =tk.LEFT)
+separatorlabel2.pack(side=tk.LEFT)
 secsentry = tk.Entry(timeinput_frame, width=2, textvariable=secs, font=("arial", 18))
-secsentry.pack(side =tk.LEFT)
+secsentry.pack(side=tk.LEFT)
+
+#Frame for preset buttons
+preset_frame = tk.Frame(timer_tab)
+preset_frame.pack(pady=10)
+
+def set_preset_time(h, m, s):
+    hours.set(f"{h:02}")
+    mins.set(f"{m:02}")
+    secs.set(f"{s:02}")
+
+#preset buttons
+preset_5min = tk.Button(preset_frame, text="5 min")
+preset_5min.config(command=lambda: set_preset_time(0, 5, 0))
+preset_5min.pack(side=tk.LEFT, padx=5)
+
+preset_10min = tk.Button(preset_frame, text="10 min")
+preset_10min.config(command=lambda: set_preset_time(0, 10, 0))
+preset_10min.pack(side=tk.LEFT, padx=5)
+
+preset_25min = tk.Button(preset_frame, text="25 min")
+preset_25min.config(command=lambda: set_preset_time(0, 25, 0))
+preset_25min.pack(side=tk.LEFT, padx=5)
+
+preset_1hour = tk.Button(preset_frame, text="1 hour")
+preset_1hour.config(command=lambda: set_preset_time(1, 0, 0))
+preset_1hour.pack(side=tk.LEFT, padx=5)
 
 purpose_label = tk.Label(timer_tab, text="Purpose")
 purpose_label.pack()
@@ -852,17 +914,18 @@ purpose_entry.pack()
 timers_frame = tk.Frame(timer_tab)
 timers_frame.pack(pady=20)
 
+#checking input validation
 def inputvalidation():
     try:
 
         if  int(secs.get()) < 0 or int(secs.get()) > 59:
-            messagebox.showerror("invalid input", "It must be smaller than 59 or greater than 0")
+            messagebox.showerror("invalid input", "It must be between 0 to 59")
             return False
         if int(mins.get()) < 0 or int(mins.get()) > 59:
-            messagebox.showerror("invalid input", "It must be smaller than 59 or greater than 0")
+            messagebox.showerror("invalid input", "It must be between 0 to 59")
             return False
         if int(hours.get()) < 0 or int(hours.get()) > 99:
-            messagebox.showerror("invalid input", "It must be smaller than 100 or greater than 0")
+            messagebox.showerror("invalid input", "It must be between 0 to 99")
             return False
         if hours.get() == "00" and mins.get() == "00" and secs.get() == "00":
            messagebox.showerror("Invalid Time", "Time must be greater than 00:00:00.")
@@ -870,7 +933,7 @@ def inputvalidation():
      
         return True
     except ValueError:
-        messagebox.showerror("Invalid Input","Ah boi do uk how to use a timer")
+        messagebox.showerror("Invalid Input", "Please enter valid numbers for hours, minutes, and seconds.")
         return False
 
 #timer function
@@ -883,7 +946,7 @@ def timer():
     create_time = time.strftime("%Y-%m-%d %H:%M:%S")
     purpose_text = purpose.get()
 
-    #saving func
+    #saving function
     with open("timerhistory.txt","a") as f:
         f.write(f"{create_time} - {purpose_text} ({hours.get()}:{mins.get()}:{secs.get()})\n")
     
@@ -899,6 +962,7 @@ def timer():
     remaining_time = [totaltime]
     paused = [False]
 
+    #countdown function
     def countdown(timeleft):
         if timeleft >= 0:
             hourss,remainder = divmod(timeleft,3600)
@@ -909,8 +973,25 @@ def timer():
             remaining_time[0] = timeleft
         else:
             ntimer_label.config(text="DONE!", fg="green")
-            winsound.Beep(1000, 500) 
-            messagebox.showinfo("ALERT", f"TIMES UP for '{purpose_text}'")
+
+            if os.path.exists(sound_path.get()):
+                try:
+                    pygame.mixer.music.load(sound_path.get())
+                    pygame.mixer.music.play()
+
+                except Exception as e:
+                    print("Error playing sound:", e)
+            else:
+                print("No sound file selected or path invalid.")
+
+            if show_notification.get():
+                notification.notify(
+                    title="Timer Finished",
+                    message=f"Time's up for '{purpose_text}'",
+                    timeout=3
+                )
+                messagebox.showinfo("ALERT", f"TIMES UP for '{purpose_text}'")
+
 
     def pause():
         paused[0] = True
@@ -948,8 +1029,9 @@ def timer():
 start_btn = tk.Button(timer_tab, text="Start New Timer", command=timer)
 start_btn.pack()
 
+#history tab 
 def open_history_window():
-    history_window = tk.Toplevel(timer_tab)
+    history_window = tk.Toplevel(root)
     history_window.title("History")
     history_window.geometry("400x400")
     history_label = tk.Label(history_window, text="History Here", font=("Arial", 16))
@@ -967,9 +1049,55 @@ def open_history_window():
 history_button = tk.Button(timer_tab, text="History", command=open_history_window)
 history_button.place(relx=0.0, rely=1.0, x=10, y=-10, anchor="sw")
 
+sound_path = StringVar(value="") 
+if os.path.exists("alarmpath.txt"):
+    with open("alarmpath.txt", "r") as f:
+        saved_alarm = f.read().strip()
+        if os.path.exists(saved_alarm):
+            sound_path.set(saved_alarm)
+        else:
+            messagebox.showwarning("Alarm Sound Not Found", "The previously saved alarm sound file was not found. Please select a new one.")
+
+def choose_sound():
+    file = filedialog.askopenfilename(
+        title="Select Alarm Sound",
+        filetypes=[("Audio Files", "*.wav *.mp3 *.ogg")]
+    )
+    if file:
+        sound_path.set(file)
+        with open("alarmpath.txt", "w") as f:
+            f.write(file)
+
+def preview_sound():
+    if os.path.exists(sound_path.get()):
+        try:
+            pygame.mixer.music.load(sound_path.get())
+            pygame.mixer.music.play()
+        except Exception as e:
+            messagebox.showerror("Sound Error", f"Could not play the sound.\n{e}")
+    else:
+        messagebox.showwarning("No Sound", "Please select a valid sound file first.")
+
+
+show_notification = tk.BooleanVar(value=True)
+
+options_frame = tk.Frame(timer_tab)
+options_frame.place(relx=1.0, rely=1.0, x=-10, y=-10, anchor="se")
+
+select_button = tk.Button(options_frame, text="🎵 Choose Alarm Sound", command=choose_sound)
+select_button.pack(side=tk.LEFT)
+
+preview_button = tk.Button(options_frame, text="🔊 Preview", command=preview_sound)
+preview_button.pack(side=tk.LEFT, padx=5)
+
+
+notify_checkbox = tk.Checkbutton(options_frame, text="Notification PoPup", variable=show_notification)
+notify_checkbox.pack(side=tk.LEFT, padx=10)
+
+
 clock()
 
-# todo tab
+
 todo_tab = tk.Frame(notebook, bg=WHITE_BG)
 notebook.add(todo_tab, text="✅ To-Do List")
 
@@ -1007,23 +1135,33 @@ def addtask(event = None):
         else:                                                                                   
             task_tree.insert("", "end", values=("☐", date, task, priority), tags=(priority))   #add task to list 
             task_entry.delete(0, tk.END)                                                       #delete entry after task added  
-        
         tdl_task()                                                                             #save to txt file
+        temp_message("Task added!")
 
 #delete task function
 def deletetask():
         whichtask = task_tree.selection()                                                       #see which task selecred
         if whichtask:                           
-            task_tree.delete(whichtask)                                                         #delete selected task
+            if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete the selected task?"):
+                task_tree.delete(whichtask)
+                tdl_task()
+                
         else:
              messagebox.showerror("Error","No task selected")                                   #if didnt select task
 
         tdl_task()                                                                              #update the txt file
+        temp_message("Task deleted!", color="red")
 
 completed_task = []                                                                             #list to hold completed tasks
 
 #toggle function
 def togglecheckbox(event):
+
+    #check where user clicking
+    region = task_tree.identify("region", event.x, event.y)
+    if region != "cell":
+        return
+    
     selected = task_tree.selection()                                                            #get task              
     if selected:
         for task in selected:
@@ -1035,10 +1173,11 @@ def togglecheckbox(event):
     
     tdl_task()
     tracker_task()
+    temp_message("Task marked as completed!")
 
 completed_tasktree = None                                                                       #global the treeview
 
-#untoggle function
+#undo toggle function
 def undo_completedtask(event):
     selected = completed_tasktree.selection()
     if selected:
@@ -1056,9 +1195,13 @@ def undo_completedtask(event):
     
     tdl_task()
     tracker_task()
+    temp_message("Task restored!", color="red")
 
 button_frame = tk.Frame(todo_tab)
 button_frame.pack(pady=10, fill="x")
+
+message_label = tk.Label(todo_tab, text="", fg="green", font=("Arial", 10))
+message_label.pack(pady=(0, 5))
 
 addtask_btn = tk.Button(button_frame, text="Add Task", command=addtask)
 addtask_btn.pack(side="left", padx=10, pady=5) 
@@ -1068,20 +1211,26 @@ deltask_btn.pack(side="left", padx=10, pady=5)
 
 listbox_frame = tk.Frame(todo_tab)
 listbox_frame.pack(fill="both", expand=True, padx=10, pady=10)
+listbox_frame.grid_rowconfigure(0, weight=1)
+listbox_frame.grid_columnconfigure(0, weight=1)
 
 section = ("status", "Date", "Task", "Priority")
 task_tree = ttk.Treeview(listbox_frame, columns=section, show="headings")
 
+scrollbar = ttk.Scrollbar(listbox_frame, orient="vertical", command=task_tree.yview)
+task_tree.configure(yscrollcommand=scrollbar.set)
+task_tree.grid(row=0, column=0, sticky="nsew")
+scrollbar.grid(row=0, column=1, sticky="ns")
+
 task_tree.heading("status", text="Status")
 task_tree.column("status", width=50, stretch=tk.NO) 
-task_tree.heading("Date", text="Date")
+task_tree.heading("Date", text="Date", command=lambda: sorting(task_tree, "Date", sort_states.get("Date", False)))
 task_tree.column("Date", width=100, stretch=tk.NO)  
-task_tree.heading("Task", text="Task")
+task_tree.heading("Task", text="Task", command=lambda: sorting(task_tree, "Task", sort_states.get("Task", False)))
 task_tree.column("Task", width=300, stretch=tk.YES)  
-task_tree.heading("Priority", text="Priority")
-task_tree.column("Priority", width=100, stretch=tk.NO)
+task_tree.heading("Priority", text="Priority", command=lambda: sorting(task_tree, "Priority", sort_states.get("Priority", False)))
+task_tree.column("Priority", width=150, stretch=tk.NO)  
 
-task_tree.pack(fill="both", expand=True)
 task_tree.bind("<Double-1>", togglecheckbox)
 
 task_tree.tag_configure("High", background="#ff9999")   
@@ -1092,9 +1241,13 @@ task_entry.bind("<Return>", addtask)
 
 def completion_tracker():
     global completed_tasktree
-    completiontracker = tk.Toplevel(todo_tab)  
+    completiontracker = tk.Toplevel(root)  
     completiontracker.title("Completion Tracker")
     completiontracker.geometry("500x500")
+    frame = tk.Frame(completiontracker)
+    frame.pack(fill="both", expand=True, padx=10, pady=10)
+    frame.grid_rowconfigure(0, weight=1)
+    frame.grid_columnconfigure(0, weight=1)
     
     if not completed_task:
         label = tk.Label(completiontracker, text="No completed tasks yet.")
@@ -1102,7 +1255,7 @@ def completion_tracker():
         return
     
     else:
-        completed_tasktree = ttk.Treeview(completiontracker, columns=section, show="headings")
+        completed_tasktree = ttk.Treeview(frame, columns=section, show="headings")
         completed_tasktree.heading("status", text="Status")
         completed_tasktree.column("status", width=50, stretch=tk.NO) 
         completed_tasktree.heading("Date", text="Date")
@@ -1112,10 +1265,14 @@ def completion_tracker():
         completed_tasktree.heading("Priority", text="Priority")
         completed_tasktree.column("Priority", width=80, stretch=tk.NO)
 
+        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=completed_tasktree.yview)
+        completed_tasktree.configure(yscrollcommand=scrollbar.set)
+        completed_tasktree.grid(row=0, column=0, sticky="nsew")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
         for task in completed_task:
             completed_tasktree.insert("", "end", values=task)
 
-        completed_tasktree.pack(fill="both", expand=True, padx=10, pady=10)
         completed_tasktree.bind("<Double-1>", undo_completedtask)
 
 completion_tracker_btn = tk.Button(button_frame, text="Completion Tracker", command=completion_tracker)
@@ -1155,10 +1312,38 @@ def load_txt():
     except FileNotFoundError:
         pass
 
+sort_states = {}                                                                                    #dict to store sort state
+
+def sorting(tree, col, descending):
+    global sort_states
+    data = [(tree.set(item, col), item) for item in tree.get_children()]                            #get value and item id list
+
+    if col == "Date":
+        data.sort(key=lambda t: datetime.strptime(t[0], "%Y-%m-%d"), reverse=descending)            #convert date string and see wheter ascending or descending
+
+    elif col == "Priority":
+        priority_order = {"High": 0, "Medium": 1, "Low": 2}
+        data.sort(key=lambda t: priority_order.get(t[0].capitalize(), 99), reverse=descending)      #get priority and make sure everything in correct form
+
+    else:
+        data.sort(key=lambda t: t[0].lower(), reverse=descending)
+
+    for index, (val, item) in enumerate(data):                                                      #check all index and give all data a index
+        tree.move(item, '', index)                                                                  #move it
+
+    for colname in tree["columns"]:
+        arrow = ""
+        if colname == col:
+            arrow = " ↓" if descending else " ↑"
+        sort_states[col] = not descending                                              
+        tree.heading(colname, text=colname + arrow, command=lambda c=colname: sorting(tree, c, sort_states.get(c, False))) #update the heading
+
+#notification
+def temp_message(message, color="green"):
+    message_label.config(text=message, fg=color)
+    root.after(1500, lambda: message_label.config(text=""))
 
 load_txt()
-
-
 
 # all note function
 def update_file_list():
@@ -1168,20 +1353,30 @@ def update_file_list():
         file_listbox.insert(tk.END, file)
 
 def search_notes():
-    search_term = search_entry.get().lower()
+    search_term = search_entry.get().lower().strip()
     file_listbox.delete(0, tk.END)
     files = [f for f in os.listdir(folder_path) if f.endswith((".txt", ".md", ".html"))]
 
+    shown_files = set()  # To prevent duplicates
+
     for file in files:
         file_path = os.path.join(folder_path, file)
+
+        file_name_match = search_term in file.lower()
+        content_match = False
+
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read().lower()
-            if search_term in content:
-                file_listbox.insert(tk.END, file)
+                content_match = search_term in content
         except Exception as e:
-            # Optional: handle unreadable files gracefully
             print(f"Could not read {file}: {e}")
+            continue
+
+        # Show if either file name or content matches
+        if (file_name_match or content_match) and file not in shown_files:
+            file_listbox.insert(tk.END, file)
+            shown_files.add(file)
 
 def perform_advanced_search():
     query = search_entry.get().strip().lower()
@@ -1190,26 +1385,29 @@ def perform_advanced_search():
         return
 
     results = []
-
+    
     # Search in file names and contents
     for file_name in os.listdir(folder_path):
         if file_name.endswith(".txt"):
             file_path = os.path.join(folder_path, file_name)
 
-            # Match file name
-            if query in file_name.lower():
+            name_match = query in file_name.lower()
+            content_match = False
+
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    content_match = query in content.lower()
+            except Exception as e:
+                print(f"Could not read {file_name}: {e}")
+                continue
+
+            if name_match and content_match:
+                results.append(f"Match in File: {file_name} (name + content)")
+            elif name_match:
                 results.append(f"File Name Match: {file_name}")
-
-            # Match file content
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-                if query in content.lower():
-                    results.append(f"Content Match in {file_name}")
-
-    # Search in calendar remarks
-    for date_str, remark in remarks.items():
-        if query in remark.lower():
-            results.append(f"Remark Match: {date_str} - {remark}")
+            elif content_match:
+                results.append(f"Content Match in {file_name}")
 
     # Show results
     if results:
@@ -1406,7 +1604,270 @@ def open_trash_bin():
     btn_delete_all = ttk.Button(trash_win, text="Clear", command=delete_all_files)
     btn_delete_all.pack(side='right', padx=(20,100), pady=10)
 
-def open_drive_panel():
+# Google Drive API 
+
+
+import mimetypes
+import webbrowser
+import json
+
+# Defines permission 
+# metadata - view file names adn metadata 
+#drive.file uploading files 
+SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.file"]
+auth_window = None  
+SYNC_META_PATH = r"C:\Notes\.syncmeta.json"
+LOCAL_FOLDER_PATH = r"C:\Notes"
+
+
+def authenticate():
+    creds = None
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+            CREDENTIALS_PATH = os.path.join(BASE_DIR, "credentials.json")
+            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
+            creds = flow.run_local_server(port=0)
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+
+    return build('drive', 'v3', credentials=creds)
+
+def get_or_create_main_folder(service):
+    global folder
+    folder_name = "MMU Study Buddy Files"
+    query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+    results = service.files().list(q=query, fields="files(id, name)").execute()
+    items = results.get('files', [])
+    if items:
+        return items[0]['id']
+    file_metadata = {
+        'name': folder_name,
+        'mimeType': 'application/vnd.google-apps.folder'
+    }
+    folder = service.files().create(body=file_metadata, fields='id').execute()
+    return folder['id']
+
+##############
+
+def sync_upload_file(service, file_path, folder_id, existing_drive_id=None):
+    file_name = os.path.basename(file_path)
+    file_metadata = {"name": file_name, "parents": [folder_id]}
+    media = MediaFileUpload(file_path, resumable=True)
+
+    if existing_drive_id:
+        uploaded_file = service.files().update(
+            fileId=existing_drive_id,
+            media_body=media
+        ).execute()
+    else:
+        uploaded_file = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields="id, modifiedTime"
+        ).execute()
+
+    # 🔁 Make sure to fetch the updated modifiedTime
+    updated_file = service.files().get(fileId=uploaded_file["id"], fields="id, modifiedTime").execute()
+
+    return {
+        "local_modified": get_local_modified_time(file_path).isoformat(),
+        "drive_modified": updated_file["modifiedTime"],
+        "drive_id": updated_file["id"]
+    }
+
+
+
+def sync_download_files(service, file_id, local_file_path):
+    try:
+        request = service.files().get_media(fileId=file_id)
+        os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
+        with open(local_file_path, 'wb') as f:
+            downloader = MediaIoBaseDownload(f, request)
+            done = False
+            while not done:
+                status, done = downloader.next_chunk()
+            drive_file = service.files().get(fileId=file_id, fields='modifiedTime').execute()
+        drive_mod_time_str = drive_file['modifiedTime']
+        drive_mod_time = parser.parse(drive_mod_time_str)
+        mod_timestamp = drive_mod_time.timestamp()
+        os.utime(local_file_path, (mod_timestamp, mod_timestamp))
+        return {
+            "drive_id": file_id,
+            "drive_modified": drive_mod_time_str,
+            "local_modified": drive_mod_time.isoformat()
+    }
+    except Exception as e:
+        print(f"error:{str(e)}")
+
+
+def list_drive_files(service, folder_id):
+    query = f"'{folder_id}' in parents and trashed = false"
+    fields = "files(id, name, modifiedTime)"
+    results = service.files().list(q=query, fields=fields).execute()
+    return results.get('files', [])
+
+# ---------- Sync meta (local cache) ----------
+
+def load_sync_meta():
+    if os.path.exists(SYNC_META_PATH):
+        try:
+            with open(SYNC_META_PATH, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if not content:
+                    return {}
+                return json.loads(content)
+        except json.JSONDecodeError:
+            print("⚠️ Warning: .syncmeta.json is corrupted or invalid. Resetting.")
+            return {}
+    return {}
+
+def save_sync_meta(meta):
+    print(f"Saving sync meta to: {SYNC_META_PATH}")
+    try:
+        with open(SYNC_META_PATH, "w", encoding="utf-8") as f:
+            json.dump(meta, f, indent=4)
+        print("Updated into json")
+    except Exception as e:
+        print("Failed to save sync meta:", e)
+
+def get_local_modified_time(filepath):
+    return datetime.fromtimestamp(os.path.getmtime(filepath), tz=timezone.utc)
+
+
+def timestamps_close(t1, t2, tolerance_seconds=2):
+    delta = abs((t1 - t2).total_seconds())
+    return delta <= tolerance_seconds
+
+# ---------- Main sync function ----------
+ 
+def sync_now_to_drive():
+    sync_meta = load_sync_meta()
+    updated_meta = {}
+    all_synced = True  # Assume everything is synced unless proven otherwise
+
+    try:
+        print("🔄 2-Way Sync started...")
+        folder_path = LOCAL_FOLDER_PATH
+        service = authenticate()
+        drive_folder_id = get_or_create_main_folder(service)
+
+        drive_files = list_drive_files(service, drive_folder_id)
+        drive_file_map = {f["name"]: f for f in drive_files}
+
+        for root_dir, dirs, files in os.walk(folder_path):
+            if root_dir != folder_path:
+                print(f"⏭️ Skipped folder: {root_dir}")
+                continue
+
+            for filename in files:
+                if filename == ".syncmeta.json":
+                    continue
+
+                local_path = os.path.join(folder_path, filename)
+                local_time = get_local_modified_time(local_path)
+                drive_file = drive_file_map.get(filename)
+                
+                prev_entry = sync_meta.get(filename, {})
+                prev_local_time = parser.parse(prev_entry.get("local_modified")) if prev_entry.get("local_modified") else None
+                prev_drive_time = parser.parse(prev_entry.get("drive_modified")) if prev_entry.get("drive_modified") else None
+
+                if drive_file:
+                    drive_id = drive_file["id"]
+                    drive_time = parser.parse(drive_file["modifiedTime"])
+
+                    if local_time > drive_time and not timestamps_close(local_time, drive_time):
+                        print(f"🔼 Local newer → Uploading {filename}")
+                        all_synced = False
+                        uploaded = sync_upload_file(service, local_path, drive_folder_id, existing_drive_id=drive_id)
+                        updated_meta[filename] = {
+                            "local_modified": local_time.isoformat(),
+                            "drive_modified": uploaded["drive_modified"],
+                            "drive_id": uploaded["drive_id"]
+                        }
+
+                    elif drive_time > local_time and not timestamps_close(drive_time, local_time):
+                        print(f"🔽 Drive newer → Downloading {filename}")
+                        all_synced = False
+                        result = sync_download_files(service, drive_id, local_path)
+                        updated_meta[filename] = result
+
+                    else:
+                        print(f"✅ Up-to-date: {filename}")
+                        # Leave `all_synced` unchanged here to avoid false positive
+                        updated_meta[filename] = {
+                            "local_modified": local_time.isoformat(),
+                            "drive_modified": drive_time.isoformat(),
+                            "drive_id": drive_id
+                        }
+
+                else:
+                    print(f"🔼 Only on PC → Uploading {filename}")
+                    all_synced = False
+                    uploaded = sync_upload_file(service, local_path, drive_folder_id)
+                    updated_meta[filename] = {
+                        "local_modified": local_time.isoformat(),
+                        "drive_modified": uploaded["drive_modified"],
+                        "drive_id": uploaded["drive_id"]
+                    }
+
+        # Handle files only on Drive
+        for drive_file in drive_files:
+            filename = drive_file["name"]
+            local_file_path = os.path.join(folder_path, filename)
+            if not os.path.exists(local_file_path):
+                print(f"🔽 Only on Drive → Downloading {filename}")
+                all_synced = False
+                result = sync_download_files(service, drive_file["id"], local_file_path)
+                updated_meta[filename] = result
+
+        print("Updated meta content before saving:", updated_meta)
+        save_sync_meta(updated_meta)
+
+        print("✅ 2-Way Sync complete!")
+        return all_synced
+
+    except Exception as e:
+        print("❌ Sync failed:", e)
+        return True  # Fail safe: exit loop on error
+
+def sync_till_up_to_date():
+    print("I am till all file is up to date")
+    while True:
+        SyncStatus = sync_now_to_drive()
+        if SyncStatus:
+            break
+    
+    print("✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅")
+    messagebox.showinfo("Sync Completed", "All Files Have Been Synced")
+
+
+######
+
+auto_sync_enabled = True
+auto_sync_timer = None
+
+def main_api():
+    sync_interval_var = tk.StringVar(value="5 min")
+    auto_sync_enabled_var = tk.BooleanVar(value=True)
+
+    def show_files():
+        global service
+        folder_path = r"C:\Notes"
+        try:
+            files = os.listdir(folder_path)
+            files = [file for file in files if os.path.isfile(os.path.join(folder_path, file))]
+            file_listbox.delete(0, tk.END)
+            for file in files:
+                file_listbox.insert(tk.END, file)
+        except FileNotFoundError:
+            print("The folder path doesn't exist.")
+
     drive_window = tk.Toplevel()
     drive_window.title("Drive Panel")
     drive_window.resizable(False, False)
@@ -1422,29 +1883,39 @@ def open_drive_panel():
     ).pack(pady=(15, 10))
 
     # Frame for buttons
-    button_frame = tk.Frame(drive_window, bg="#f0f0f0")
+    button_frame = tk.Frame(drive_window)
     button_frame.pack(pady=10)
 
-    # Common button style
-    def create_button(text):
-        return tk.Button(
-            button_frame,
-            text=text,
-            font=("Arial", 10, "bold"),
+    # Buttons
+    SyncNow = tk.Button(button_frame, text="⬇️ Sync Now", command=sync_till_up_to_date, font=("Arial", 10),
             bg="#e0e0e0",    # light gray background
             fg="#000000",    # black text
             relief="raised",
             bd=2,
             width=20,
-            height=2
-        )
+            height=2)
+    SyncNow.pack(pady=5)
+    
+    def open_drive():
+        webbrowser.open("https://drive.google.com/drive/my-drive")
 
-    # Buttons
-    create_button("⬇️ Download").pack(pady=5)
-    create_button("⬆️ Upload").pack(pady=5)
-    create_button("🌐 Go to Drive").pack(pady=5)
-    create_button("🔄 Reload").pack(pady=5)
-    create_button("🚪 Log Out").pack(pady=5)
+    ToDrive = tk.Button(button_frame, text="🌐 Go to Drive", command=open_drive, font=("Arial", 10),
+            bg="#e0e0e0",    # light gray background
+            fg="#000000",    # black text
+            relief="raised",
+            bd=2,
+            width=20,
+            height=2)
+    ToDrive.pack(pady=5)
+
+    ReloadFiles = tk.Button(button_frame, text="🔄 Reload", command=show_files, font=("Arial", 10),
+            bg="#e0e0e0",    # light gray background
+            fg="#000000",    # black text
+            relief="raised",
+            bd=2,
+            width=20,
+            height=2)
+    ReloadFiles.pack(pady=5)
 
     # Footer
     tk.Label(
@@ -1454,6 +1925,122 @@ def open_drive_panel():
         bg="#f0f0f0",
         fg="#555555"
     ).pack(pady=(15, 10))
+
+
+
+    SYNC_OPTIONS = {
+    "Every 10 min": 600,
+    "Every 30 min": 1800,
+    "Every 1 hour": 3600
+    }
+
+    sync_interval_var = tk.StringVar(value="Every 10 min")  # Default
+
+    # Interval dropdown
+    SyncTiming = ttk.OptionMenu(button_frame, sync_interval_var, sync_interval_var.get(), *SYNC_OPTIONS.keys())
+    SyncTiming.pack()
+
+
+
+    def start_auto_sync():
+        global auto_sync_timer
+
+        interval_label = sync_interval_var.get()
+        interval_seconds = SYNC_OPTIONS.get(interval_label, 0)
+
+        if interval_seconds == 0:
+            print("⛔ Auto-sync is OFF.")
+            return
+
+        if auto_sync_enabled:
+            print(f"⏳ Scheduled next auto-sync in {interval_seconds} seconds...")
+            auto_sync_timer = threading.Timer(interval_seconds, run_auto_sync)
+            auto_sync_timer.start()
+
+
+    def run_auto_sync():
+        try:
+            print("🔄 Auto-Sync triggered...")
+            sync_till_up_to_date() 
+        finally:
+            start_auto_sync()
+
+
+    from tkinter import BooleanVar, Checkbutton
+
+    auto_sync_enabled_var = BooleanVar(value=True)
+
+    def toggle_auto_sync():
+        global auto_sync_enabled, auto_sync_timer
+        auto_sync_enabled = auto_sync_enabled_var.get()
+        if auto_sync_enabled:
+            SyncTiming.config(state="normal")
+            start_auto_sync()
+            print("▶️ Auto-Sync Enabled")
+        else:
+            SyncTiming.config(state="disabled")  # Disable dropdown            
+            if auto_sync_timer:
+                auto_sync_timer.cancel()
+            print("⏸️ Auto-Sync Paused")
+
+    # Enable/disable checkbox
+    SyncAuto = tk.Checkbutton(button_frame, text="Auto-Sync", variable=auto_sync_enabled_var, command=toggle_auto_sync)
+    SyncAuto.pack()
+
+
+
+    def logout():
+        global service
+        print("Logging out...")
+        service = None
+        if os.path.exists("token.json"):
+            os.remove("token.json")
+        messagebox.showinfo("Logged Out", "You have been logged out successfully.")
+
+    def on_closing():
+        if messagebox.askyesno("Sign Out", "Are you sure you want to sign out?"):
+            logout()
+            LogOut.config(state="disabled")
+            messagebox.showinfo("Goodbye", "You have been signed out. You will need to sign in again next time.")
+            drive_window.destroy()
+        else:
+            drive_window.destroy()
+            main_api()
+
+
+        LogOut = ttk.Button(button_frame, text="🚪 Log Out", command=on_closing, font=("Arial", 10),
+            bg="#e0e0e0",    # light gray background
+            fg="#000000",    # black text
+            relief="raised",
+            bd=2,
+            width=20,
+            height=2)
+        LogOut.pack(pady=5)
+
+
+    show_files()
+
+def threaded_authenticate(callback):
+    global auth_window 
+
+    def worker():
+        global service
+        try:
+            service = authenticate()
+            root.after(0, lambda: finish_auth(callback))  # callback on main thread
+        except Exception as e:
+            print("Authentication failed:", e)
+            root.after(0, lambda: messagebox.showerror("Error", "Authentication failed. Please try again."))
+
+
+    threading.Thread(target=worker, daemon=True).start()
+
+def finish_auth(callback):
+    global auth_window
+    if auth_window is not None:
+        auth_window.destroy()
+        auth_window = None
+    callback()
 
 
 #note tab
@@ -1491,10 +2078,10 @@ load_pinned_notes()
 
 file_listbox.bind("<Button-3>", show_listbox_menu)
 tree.bind("<Button-3>", show_tree_menu)
-btn_new = ttk.Button(note_btn_frame, text="New Note",command=run_notepad)
+btn_new = ttk.Button(note_btn_frame, text="New Note", command=run_notepad)
 btn_new.pack(side='left', padx=5)
 
-btn_open = ttk.Button(note_btn_frame, text="Open Note",command=open_file_button_clicked)
+btn_open = ttk.Button(note_btn_frame, text="Open Note", command=open_file_button_clicked)
 btn_open.pack(side='left', padx=5)
 
 btn_delete = ttk.Button(note_btn_frame, text="Delete Note", command=lambda: deleting_notes())
@@ -1503,7 +2090,7 @@ btn_delete.pack(side='left', padx=5)
 btn_export = ttk.Button(note_btn_frame, text="Export Notes", command=lambda: export_notes_with_format())
 btn_export.pack(side='left', padx=5)
 
-btn_drive = ttk.Button(note_btn_frame, text="Open Drive", command=open_drive_panel)
+btn_drive = ttk.Button(note_btn_frame, text="Open Drive", command=main_api)
 btn_drive.pack(side="left", padx=5)
 
 listbox_menu = tk.Menu(card_frame, tearoff=0)# tear off is the dash line in the menu list
@@ -1732,3 +2319,5 @@ populate_pinned_preview(pinned_preview_frame)
 update_file_list()
 check_reminders_on_startup()
 root.mainloop()
+
+
