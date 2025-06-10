@@ -26,7 +26,8 @@ import time
 
 pygame.mixer.init()
 
-folder_path = r"C:\Notes"
+folder_name = "Notes"
+folder_path = Path.home() / folder_name
 
 try:
     os.makedirs(folder_path, exist_ok=True)
