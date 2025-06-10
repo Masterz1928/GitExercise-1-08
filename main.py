@@ -2008,14 +2008,14 @@ def main_api():
             main_api()
 
 
-        LogOut = ttk.Button(button_frame, text="🚪 Log Out", command=on_closing, font=("Arial", 10),
-            bg="#e0e0e0",    # light gray background
-            fg="#000000",    # black text
-            relief="raised",
-            bd=2,
-            width=20,
-            height=2)
-        LogOut.pack(pady=5)
+    LogOut = tk.Button(button_frame, text="🚪 Log Out", command=on_closing, font=("Arial", 10),
+        bg="#e0e0e0",    # light gray background
+        fg="#000000",    # black text
+        relief="raised",
+        bd=2,
+        width=20,
+        height=2)
+    LogOut.pack(pady=5)
 
 
     show_files()
