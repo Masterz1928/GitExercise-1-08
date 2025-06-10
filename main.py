@@ -851,6 +851,7 @@ hours = StringVar(value="00")
 mins = StringVar(value="00")
 secs = StringVar(value="00")
 
+#get purpose
 purpose = StringVar(timer_tab, "")
 
 main_label = tk.Label(timer_tab, text="Set the time")
@@ -880,7 +881,7 @@ def set_preset_time(h, m, s):
     mins.set(f"{m:02}")
     secs.set(f"{s:02}")
 
-#Create preset buttons
+#preset buttons
 preset_5min = tk.Button(preset_frame, text="5 min")
 preset_5min.config(command=lambda: set_preset_time(0, 5, 0))
 preset_5min.pack(side=tk.LEFT, padx=5)
@@ -937,7 +938,7 @@ def timer():
     create_time = time.strftime("%Y-%m-%d %H:%M:%S")
     purpose_text = purpose.get()
 
-    #saving func
+    #saving function
     with open("timerhistory.txt","a") as f:
         f.write(f"{create_time} - {purpose_text} ({hours.get()}:{mins.get()}:{secs.get()})\n")
     
@@ -953,6 +954,7 @@ def timer():
     remaining_time = [totaltime]
     paused = [False]
 
+    #countdown function
     def countdown(timeleft):
         if timeleft >= 0:
             hourss,remainder = divmod(timeleft,3600)
@@ -1019,6 +1021,7 @@ def timer():
 start_btn = tk.Button(timer_tab, text="Start New Timer", command=timer)
 start_btn.pack()
 
+#history tab 
 def open_history_window():
     history_window = tk.Toplevel(root)
     history_window.title("History")
@@ -1085,7 +1088,7 @@ notify_checkbox.pack(side=tk.LEFT, padx=10)
 
 
 clock()
-#root.mainloop()
+
 
 todo_tab = tk.Frame(notebook, bg=WHITE_BG)
 notebook.add(todo_tab, text="✅ To-Do List")
@@ -1145,7 +1148,8 @@ completed_task = []                                                             
 
 #toggle function
 def togglecheckbox(event):
-    
+
+    #check where user clicking
     region = task_tree.identify("region", event.x, event.y)
     if region != "cell":
         return
@@ -1165,7 +1169,7 @@ def togglecheckbox(event):
 
 completed_tasktree = None                                                                       #global the treeview
 
-#untoggle function
+#undo toggle function
 def undo_completedtask(event):
     selected = completed_tasktree.selection()
     if selected:
@@ -1326,6 +1330,7 @@ def sorting(tree, col, descending):
         sort_states[col] = not descending                                              
         tree.heading(colname, text=colname + arrow, command=lambda c=colname: sorting(tree, c, sort_states.get(c, False))) #update the heading
 
+#notification
 def temp_message(message, color="green"):
     message_label.config(text=message, fg=color)
     root.after(1500, lambda: message_label.config(text=""))
