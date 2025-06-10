@@ -26,6 +26,7 @@ import time
 
 pygame.mixer.init()
 
+global folder_path
 folder_name = "Notes"
 folder_path = Path.home() / folder_name
 
@@ -60,10 +61,6 @@ def run_notepad(file_content=""):
     #Set another global variable for saving the file and switching modes
     Current_File_Mode = "Markdown"
 
-    # Set Folder for Notes Location
-    global folder_path
-    folder_path = "C:/Notes"
-
     #Creating Functions Here
     # Creating New File 
     def New_File():
@@ -80,10 +77,24 @@ def run_notepad(file_content=""):
     # Creating a opening function
     def Opening():
         #Clearing text box
-        global Current_File_Mode
+        global Current_File_Mode, text_file
         Text_Box.delete("1.0", tk.END)
         #Grab The file name
-        text_file = filedialog.askopenfilename(initialdir="C:/Notes", title="Open a File", filetypes=(("Text Files", "*.txt"),("HTML Files", "*.html"),("Markdown Files", "*.md"),("All Files", "*.*")))
+
+        if not text_file:
+            text_file = filedialog.askopenfilename(
+                initialdir=str(folder_path),
+                title="Open a File",
+                filetypes=(
+                    ("Text Files", "*.txt"),
+                    ("HTML Files", "*.html"),
+                    ("Markdown Files", "*.md"),
+                    ("All Files", "*.*")
+                )
+            )
+            if not text_file:
+                return  # User cancelled, stop here
+        
         Window_title = text_file
         #Check if there is a file name and if yes, make it global
         if text_file:
@@ -92,21 +103,34 @@ def run_notepad(file_content=""):
             File_extension  =  os.path.splitext(text_file)[1].lower()
             if File_extension == ".md":
                 Current_File_Mode = "Markdown"
+                print("markdown")
                 change_to_markdown()
             elif File_extension in [".html", ".htm"]:
                 Current_File_Mode = "HTML"
+                print("html")
                 change_to_html()
             elif File_extension == ".txt":
-                Current_File_Mode = "text"
+                Current_File_Mode = "Text"
+                print("txt")
                 change_to_text()
             else:
                 # Default to text if unknown type
-                Current_File_Mode = "Markdown"
+                print("This is changing it to MD is seems ")
+                change_to_markdown()
         #Updating Status bar 
         name = text_file
         Status_bar.config(text=f"{name}    ")
         name = name.replace("C:/Users/", "") #Removing the C:/ Prefix
         NotepadWindow.title(f"{Window_title} - Note Editor")
+
+        # Load File Content
+        text_file = open(text_file, "r")
+        File_Content = text_file.read()
+        #Add it into the text box
+        Text_Box.insert(tk.END, File_Content)
+        #Then, Close the open file
+        text_file.close()
+
 
         # Load File Content
         text_file = open(text_file, "r")
@@ -131,14 +155,13 @@ def run_notepad(file_content=""):
             file_extention ="*.md"
             filetypestosave = [("Markdown Files", "*.md"), ("All Files", "*.*")]
             
-        text_file = filedialog.asksaveasfilename(defaultextension=file_extention, initialdir="C:/Notes", title="Save File As", filetypes=filetypestosave)
+        text_file = filedialog.asksaveasfilename(defaultextension=file_extention, initialdir=str(folder_path), title="Save File As", filetypes=filetypestosave)
         if text_file:
             open_status_name = text_file
             #Update the status bar
             name = text_file
             Status_bar.config(text=f"Saved: {name}    ")
-            name = name.replace("C:/Users/", "") #Removing the C:/ Prefix
-            NotepadWindow.title(f"{name} - Note Editor")       
+      
 
             # Save the file 
             text_file = open(text_file, "w")
@@ -188,48 +211,44 @@ def run_notepad(file_content=""):
         except tk.TclError:
             pass
 
-    def update_button_based_on_mode():
-        if Current_File_Mode == "Text":
-            bold_btn.config(state=tk.DISABLED)
-            italic_btn.config(state=tk.DISABLED)
-            underline_btn.config(state=tk.DISABLED)
-            font_size_menu.config(state=tk.DISABLED)
-            
-        if Current_File_Mode == "HTML":
-            bold_btn.config(state=tk.DISABLED)
-            italic_btn.config(state=tk.DISABLED)
-            underline_btn.config(state=tk.DISABLED)
-            font_size_menu.config(state=tk.DISABLED)
-            
-        if Current_File_Mode == "Markdown":
-            bold_btn.config(state=tk.NORMAL)
-            italic_btn.config(state=tk.NORMAL)
-            underline_btn.config(state=tk.NORMAL)
-            font_size_menu.config(state=tk.NORMAL)
-            
+
     def change_to_html():
         global Current_File_Mode
         Current_File_Mode = "HTML"
+        print("called change to html")
         File_Settings_Menu.entryconfig("Change to Text File", background="white")  # Color for active mode
         File_Settings_Menu.entryconfig("Change to HTML", background="lightblue")  # Reset others
         File_Settings_Menu.entryconfig("Change to Markdown", background="white")
-        update_button_based_on_mode()
+        bold_btn.config(state=tk.DISABLED)
+        italic_btn.config(state=tk.DISABLED)
+        underline_btn.config(state=tk.DISABLED)
+        font_size_menu.config(state=tk.DISABLED)
+        
+        
 
     def change_to_text():
         global Current_File_Mode
         Current_File_Mode = "Text"
+        print("called change to txt")
         File_Settings_Menu.entryconfig("Change to Text File", background="lightblue")  # Color for active mode
         File_Settings_Menu.entryconfig("Change to HTML", background="white")  # Reset others
         File_Settings_Menu.entryconfig("Change to Markdown", background="white")
-        update_button_based_on_mode()
+        bold_btn.config(state=tk.DISABLED)
+        italic_btn.config(state=tk.DISABLED)
+        underline_btn.config(state=tk.DISABLED)
+        font_size_menu.config(state=tk.DISABLED)
 
     def change_to_markdown():
         global Current_File_Mode
         Current_File_Mode = "Markdown"
+        print("called change to md")
         File_Settings_Menu.entryconfig("Change to Text File", background="white")  # Color for active mode
         File_Settings_Menu.entryconfig("Change to HTML", background="white")  # Reset others
         File_Settings_Menu.entryconfig("Change to Markdown", background="lightblue")
-        update_button_based_on_mode()
+        bold_btn.config(state=tk.NORMAL)
+        italic_btn.config(state=tk.NORMAL)
+        underline_btn.config(state=tk.NORMAL)
+        font_size_menu.config(state=tk.NORMAL)
 
     # Creating a function for cut function
     def cut_text(e=None):
@@ -606,18 +625,16 @@ def run_notepad(file_content=""):
     NotepadWindow.bind("<Control-u>", lambda event: insert_markdown("<u></u>"))
     NotepadWindow.bind("<F1>", help_guide)
 
-def open_note_in_notepad(file_path):
-    # Open the notepad window with content from the file
-    try:
-        with open(file_path, "r") as file:
-            file_content = file.read()
-    except Exception as e:
-        print(f"Error opening file: {e}")
-        file_content = f"Error: {e}"
 
-    # Call run_notepad with file content
-    run_notepad(file_content)
-    Text_Box.insert(tk.END, file_content)
+    NotepadWindow.Opening = Opening
+    return NotepadWindow       
+
+
+def open_note_in_notepad(file_path):
+    global open_status_name, FileModeToSet, text_file
+    text_file = file_path
+    notepad_window = run_notepad()  # create window and get instance
+    notepad_window.Opening()  # call inner function via window
 
 # Example button click to open a file
 def open_file_button_clicked():
@@ -627,7 +644,6 @@ def open_file_button_clicked():
         file_path = os.path.join(folder_path, file_name)  # Combine folder and file name to get full path
         file_path = os.path.abspath(file_path)  # Get absolute path to avoid issues
         open_note_in_notepad(file_path)
-
 
 # color settings of the default
 WHITE_BG       = "#fdfcfa"
@@ -646,7 +662,6 @@ FONT_TEXT = ("Segoe UI", 11)
 # all the path and source
 remarks={}
 pinned_files = []
-folder_path = "C:/Notes"
 trash_folder = os.path.join(folder_path, "Trash")
 remark_path=os.path.join(folder_path,"Remark")
 pinned_path=os.path.join(folder_path,"pinned note")
@@ -1446,7 +1461,7 @@ def export_all_notes_as_zip():
         messagebox.showinfo("Info", "No notes to export.")
         return
 
-    export_folder = "C:/Notes/Exports"
+    export_folder = folder_path/ "Exports"
     os.makedirs(export_folder, exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     zip_path = os.path.join(export_folder, f"exported_notes_{timestamp}.zip")
@@ -1617,8 +1632,8 @@ import json
 #drive.file uploading files 
 SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.file"]
 auth_window = None  
-SYNC_META_PATH = r"C:\Notes\.syncmeta.json"
-LOCAL_FOLDER_PATH = r"C:\Notes"
+SYNC_META_PATH = folder_path / ".syncmeta.json"
+LOCAL_FOLDER_PATH = folder_path
 
 
 def authenticate():
@@ -1858,8 +1873,7 @@ def main_api():
     auto_sync_enabled_var = tk.BooleanVar(value=True)
 
     def show_files():
-        global service
-        folder_path = r"C:\Notes"
+        global service, folder_path
         try:
             files = os.listdir(folder_path)
             files = [file for file in files if os.path.isfile(os.path.join(folder_path, file))]
