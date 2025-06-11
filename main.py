@@ -22,7 +22,8 @@ import threading
 from dateutil import parser
 import pygame
 from plyer import notification
-import time 
+import time
+import sys
 
 pygame.mixer.init()
 
@@ -35,6 +36,14 @@ try:
     print(f"Folder '{folder_path}' created successfully!")
 except Exception as e:
     print(f"An error occurred: {e}")
+
+def get_token_path():
+    if getattr(sys, 'frozen', False):
+        base_path = os.path.dirname(sys.executable)  # if running as .exe
+    else:
+        base_path = os.path.dirname(__file__)        # if running as .py
+
+    return os.path.join(base_path, 'token.json')
 
 def run_notepad(file_content=""):
     global Text_Box
@@ -1638,8 +1647,10 @@ service = None
 
 def authenticate():
     creds = None
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    token_path = get_token_path() 
+
+    if os.path.exists(token_path):
+        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
@@ -1649,7 +1660,7 @@ def authenticate():
             CREDENTIALS_PATH = os.path.join(BASE_DIR, "credentials.json")
             flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
             creds = flow.run_local_server(port=0)
-        with open('token.json', 'w') as token:
+        with open(token_path, "w") as token:
             token.write(creds.to_json())
 
 
@@ -2003,9 +2014,10 @@ def main_api():
         global service
         print("Logging out...")
         service = None
-        if os.path.exists("token.json"):
+        token_path = get_token_path()  # <-- Use your helper function here
+        if os.path.exists(token_path):
             try:
-                os.remove("token.json")
+                os.remove(token_path)
                 print("✅ token.json deleted successfully")
             except Exception as e:
                 print(f"❌ Failed to delete token.json: {e}")
@@ -2033,9 +2045,9 @@ def main_api():
 
     # Initialize auto sync state
 
-
+token_path = get_token_path()
 auto_sync_enabled = auto_sync_enabled_var.get()
-if auto_sync_enabled and os.path.exists('token.json'):
+if auto_sync_enabled and os.path.exists(token_path):
     start_auto_sync(sync_interval_var.get())
 else: 
     messagebox.showinfo("Sign In for Auto-Sync", "Sign in to enable your auto sync function")
