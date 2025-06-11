@@ -1632,9 +1632,9 @@ import json
 #drive.file uploading files 
 SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.file"]
 auth_window = None  
-SYNC_META_PATH = folder_path / ".syncmeta.json"
-LOCAL_FOLDER_PATH = folder_path
-
+SYNC_META_PATH = r"C:\Notes\.syncmeta.json"
+LOCAL_FOLDER_PATH = r"C:\Notes"
+service = None
 
 def authenticate():
     creds = None
@@ -1651,6 +1651,7 @@ def authenticate():
             creds = flow.run_local_server(port=0)
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
+
 
     return build('drive', 'v3', credentials=creds)
 
@@ -1842,7 +1843,6 @@ def sync_now_to_drive():
                 result = sync_download_files(service, drive_file["id"], local_file_path)
                 updated_meta[filename] = result
 
-        print("Updated meta content before saving:", updated_meta)
         save_sync_meta(updated_meta)
 
         print("✅ 2-Way Sync complete!")
@@ -1852,36 +1852,83 @@ def sync_now_to_drive():
         print("❌ Sync failed:", e)
         return True  # Fail safe: exit loop on error
 
-def sync_till_up_to_date():
-    print("I am till all file is up to date")
-    while True:
-        SyncStatus = sync_now_to_drive()
-        if SyncStatus:
-            break
+def threading_sync_till_up_to_date():
+    def sync_till_up_to_date():
+        print("I am till all file is up to date")
+        while True:
+            SyncStatus = sync_now_to_drive()
+            if SyncStatus:
+                break
+        print("✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅")
+        messagebox.showinfo("Sync Completed", "All Files Have Been Synced")
+    threading.Thread(target=sync_till_up_to_date, daemon=True).start()
     
-    print("✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅")
-    messagebox.showinfo("Sync Completed", "All Files Have Been Synced")
 
 
 ######
 
+
+
+
+import tkinter as tk
+from tkinter import ttk, messagebox
+import threading
+import os
+import webbrowser
+
+# --- Sync logic (outside main_api) ---
+
+
+SYNC_OPTIONS = {
+    "Every 10 min": 600,
+    "Every 30 min": 1800,
+    "Every 1 hour": 3600
+}
+
+sync_interval_var = tk.StringVar(value="Every 10 min")
+auto_sync_enabled_var = tk.BooleanVar(value=True)
 auto_sync_enabled = True
 auto_sync_timer = None
 
-def main_api():
-    sync_interval_var = tk.StringVar(value="5 min")
-    auto_sync_enabled_var = tk.BooleanVar(value=True)
+def start_auto_sync(interval_label):
+    global auto_sync_timer, auto_sync_enabled
 
-    def show_files():
-        global service, folder_path
-        try:
-            files = os.listdir(folder_path)
-            files = [file for file in files if os.path.isfile(os.path.join(folder_path, file))]
-            file_listbox.delete(0, tk.END)
-            for file in files:
-                file_listbox.insert(tk.END, file)
-        except FileNotFoundError:
-            print("The folder path doesn't exist.")
+    interval_seconds = SYNC_OPTIONS.get(interval_label, 0)
+    if interval_seconds == 0 or not auto_sync_enabled:
+        print("⛔ Auto-sync is OFF.")
+        return
+
+    print(f"⏳ Scheduled next auto-sync in {interval_seconds} seconds...")
+    auto_sync_timer = threading.Timer(interval_seconds, run_auto_sync, args=(interval_label,))
+    auto_sync_timer.start()
+
+def run_auto_sync(interval_label):
+    global auto_sync_enabled
+
+    if not auto_sync_enabled:
+        print("⛔ Auto-sync stopped; won't continue syncing.")
+        return
+
+    try:
+        print("🔄 Auto-Sync triggered...")
+        threading_sync_till_up_to_date()
+    finally:
+        if auto_sync_enabled:
+            start_auto_sync(interval_label)
+
+
+def stop_auto_sync():
+    global auto_sync_timer
+    if auto_sync_timer:
+        auto_sync_timer.cancel()
+        auto_sync_timer = None
+    print("⏸️ Auto-Sync Paused")
+
+# --- UI function ---
+
+def main_api():
+    authenticate()
+    global auto_sync_enabled
 
     drive_window = tk.Toplevel()
     drive_window.title("Drive Panel")
@@ -1901,36 +1948,77 @@ def main_api():
     button_frame = tk.Frame(drive_window)
     button_frame.pack(pady=10)
 
+
+
+    folder_path = r"C:\Notes"
+
+    def show_files():
+        try:
+            files = os.listdir(folder_path)
+            files = [file for file in files if os.path.isfile(os.path.join(folder_path, file))]
+            file_listbox.delete(0, tk.END)
+            for file in files:
+                file_listbox.insert(tk.END, file)
+        except FileNotFoundError:
+            print("The folder path doesn't exist.")
+
     # Buttons
-    SyncNow = tk.Button(button_frame, text="⬇️ Sync Now", command=sync_till_up_to_date, font=("Arial", 10),
-            bg="#e0e0e0",    # light gray background
-            fg="#000000",    # black text
-            relief="raised",
-            bd=2,
-            width=20,
-            height=2)
+    SyncNow = tk.Button(button_frame, text="⬇️ Sync Now", command=threading_sync_till_up_to_date, font=("Arial", 10),
+                        bg="#e0e0e0", fg="#000000", relief="raised", bd=2, width=20, height=2)
     SyncNow.pack(pady=5)
-    
+
     def open_drive():
         webbrowser.open("https://drive.google.com/drive/my-drive")
 
     ToDrive = tk.Button(button_frame, text="🌐 Go to Drive", command=open_drive, font=("Arial", 10),
-            bg="#e0e0e0",    # light gray background
-            fg="#000000",    # black text
-            relief="raised",
-            bd=2,
-            width=20,
-            height=2)
+                        bg="#e0e0e0", fg="#000000", relief="raised", bd=2, width=20, height=2)
     ToDrive.pack(pady=5)
 
     ReloadFiles = tk.Button(button_frame, text="🔄 Reload", command=show_files, font=("Arial", 10),
-            bg="#e0e0e0",    # light gray background
-            fg="#000000",    # black text
-            relief="raised",
-            bd=2,
-            width=20,
-            height=2)
+                            bg="#e0e0e0", fg="#000000", relief="raised", bd=2, width=20, height=2)
     ReloadFiles.pack(pady=5)
+
+    # Interval dropdown
+    SyncTiming = ttk.OptionMenu(button_frame, sync_interval_var, sync_interval_var.get(), *SYNC_OPTIONS.keys())
+    SyncTiming.pack(pady=5)
+
+
+    def toggle_auto_sync():
+        global sync_interval_var
+        global auto_sync_enabled
+
+        auto_sync_enabled = auto_sync_enabled_var.get()
+        if auto_sync_enabled:
+            SyncTiming.config(state="normal")
+            start_auto_sync(sync_interval_var.get())
+            print("▶️ Auto-Sync Enabled")
+        else:
+            SyncTiming.config(state="disabled")
+            stop_auto_sync()
+
+    SyncAuto = tk.Checkbutton(button_frame, text="Auto-Sync", variable=auto_sync_enabled_var, command=toggle_auto_sync)
+    SyncAuto.pack(pady=5)
+
+    def logout():
+        global service
+        print("Logging out...")
+        service = None
+        if os.path.exists("token.json"):
+            try:
+                os.remove("token.json")
+                print("✅ token.json deleted successfully")
+            except Exception as e:
+                print(f"❌ Failed to delete token.json: {e}")
+        else:
+            print("⚠️ token.json not found, already deleted?")
+
+        messagebox.showinfo("Logged Out", "You have been logged out successfully.")
+        drive_window.destroy()
+        
+
+    LogOut = tk.Button(button_frame, text="🚪 Log Out", command=logout, font=("Arial", 10),
+                        bg="#e0e0e0", fg="#000000", relief="raised", bd=2, width=20, height=2)
+    LogOut.pack(pady=5)
 
     # Footer
     tk.Label(
@@ -1941,99 +2029,16 @@ def main_api():
         fg="#555555"
     ).pack(pady=(15, 10))
 
-
-
-    SYNC_OPTIONS = {
-    "Every 10 min": 600,
-    "Every 30 min": 1800,
-    "Every 1 hour": 3600
-    }
-
-    sync_interval_var = tk.StringVar(value="Every 10 min")  # Default
-
-    # Interval dropdown
-    SyncTiming = ttk.OptionMenu(button_frame, sync_interval_var, sync_interval_var.get(), *SYNC_OPTIONS.keys())
-    SyncTiming.pack()
-
-
-
-    def start_auto_sync():
-        global auto_sync_timer
-
-        interval_label = sync_interval_var.get()
-        interval_seconds = SYNC_OPTIONS.get(interval_label, 0)
-
-        if interval_seconds == 0:
-            print("⛔ Auto-sync is OFF.")
-            return
-
-        if auto_sync_enabled:
-            print(f"⏳ Scheduled next auto-sync in {interval_seconds} seconds...")
-            auto_sync_timer = threading.Timer(interval_seconds, run_auto_sync)
-            auto_sync_timer.start()
-
-
-    def run_auto_sync():
-        try:
-            print("🔄 Auto-Sync triggered...")
-            sync_till_up_to_date() 
-        finally:
-            start_auto_sync()
-
-
-    from tkinter import BooleanVar, Checkbutton
-
-    auto_sync_enabled_var = BooleanVar(value=True)
-
-    def toggle_auto_sync():
-        global auto_sync_enabled, auto_sync_timer
-        auto_sync_enabled = auto_sync_enabled_var.get()
-        if auto_sync_enabled:
-            SyncTiming.config(state="normal")
-            start_auto_sync()
-            print("▶️ Auto-Sync Enabled")
-        else:
-            SyncTiming.config(state="disabled")  # Disable dropdown            
-            if auto_sync_timer:
-                auto_sync_timer.cancel()
-            print("⏸️ Auto-Sync Paused")
-
-    # Enable/disable checkbox
-    SyncAuto = tk.Checkbutton(button_frame, text="Auto-Sync", variable=auto_sync_enabled_var, command=toggle_auto_sync)
-    SyncAuto.pack()
-
-
-
-    def logout():
-        global service
-        print("Logging out...")
-        service = None
-        if os.path.exists("token.json"):
-            os.remove("token.json")
-        messagebox.showinfo("Logged Out", "You have been logged out successfully.")
-
-    def on_closing():
-        if messagebox.askyesno("Sign Out", "Are you sure you want to sign out?"):
-            logout()
-            LogOut.config(state="disabled")
-            messagebox.showinfo("Goodbye", "You have been signed out. You will need to sign in again next time.")
-            drive_window.destroy()
-        else:
-            drive_window.destroy()
-            main_api()
-
-
-    LogOut = tk.Button(button_frame, text="🚪 Log Out", command=on_closing, font=("Arial", 10),
-        bg="#e0e0e0",    # light gray background
-        fg="#000000",    # black text
-        relief="raised",
-        bd=2,
-        width=20,
-        height=2)
-    LogOut.pack(pady=5)
-
-
     show_files()
+
+    # Initialize auto sync state
+
+
+auto_sync_enabled = auto_sync_enabled_var.get()
+if auto_sync_enabled and os.path.exists('token.json'):
+    start_auto_sync(sync_interval_var.get())
+else: 
+    messagebox.showinfo("Sign In for Auto-Sync", "Sign in to enable your auto sync function")
 
 def threaded_authenticate(callback):
     global auth_window 
