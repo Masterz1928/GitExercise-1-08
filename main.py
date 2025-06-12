@@ -25,6 +25,12 @@ from plyer import notification
 import time
 import sys
 
+
+def on_exit():
+    root.destroy()
+    sys.exit()  # Ensure the Python process ends
+
+
 pygame.mixer.init()
 
 global folder_path
@@ -44,6 +50,15 @@ def get_token_path():
         base_path = os.path.dirname(__file__)        # if running as .py
 
     return os.path.join(base_path, 'token.json')
+
+def get_cred_path():
+    if getattr(sys, 'frozen', False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(__file__)
+    return os.path.join(base_path, "credentials.json")
+
+
 
 def run_notepad(file_content=""):
     global Text_Box
@@ -129,7 +144,6 @@ def run_notepad(file_content=""):
         #Updating Status bar 
         name = text_file
         Status_bar.config(text=f"{name}    ")
-        name = name.replace("C:/Users/", "") #Removing the C:/ Prefix
         NotepadWindow.title(f"{Window_title} - Note Editor")
 
         # Load File Content
@@ -140,14 +154,6 @@ def run_notepad(file_content=""):
         #Then, Close the open file
         text_file.close()
 
-
-        # Load File Content
-        text_file = open(text_file, "r")
-        File_Content = text_file.read()
-        #Add it into the text box
-        Text_Box.insert(tk.END, File_Content)
-        #Then, Close the open file
-        text_file.close()
         
     # Creating a function to save a file as (in a .txt format) 
     def Saving_File_As():
@@ -276,7 +282,7 @@ def run_notepad(file_content=""):
 
 
     # Creating a function for copy function
-    def copy_text(e):
+    def copy_text(e=None):
         global selected_text_by_user
         # Check to see if we used keyboard shortcuts
         if e:
@@ -687,20 +693,22 @@ root.title("MMU Study Buddy")
 root.geometry("900x600")
 root.configure(bg=WHITE_BG)
 root.minsize(700, 500)
+root.protocol("WM_DELETE_WINDOW", on_exit)
 
-def get_icon():
-    # Get current script folder
-    base_dir = Path(__file__).parent.resolve()
-    icon_path = base_dir / "025.png"
 
-    if icon_path.exists():
-        return tk.PhotoImage(file=icon_path)
+def get_icon_path():
+    if getattr(sys, 'frozen', False):
+        # .exe version
+        return os.path.join(sys._MEIPASS, "025.ico")
     else:
-        print("Icon file not found.")
-        return None
-icon = get_icon()
-if icon:
-    root.iconphoto(False, icon)
+        # .py version
+        return os.path.join(os.path.dirname(__file__), "025.ico")
+
+icon_path = get_icon_path()
+if os.path.exists(icon_path):
+    root.iconbitmap(icon_path)  # <-- Use this for .ico files
+else:
+    print("Icon file not found.")
 
 
 top_frame = tk.Frame(root, bg=BLUE_BG, height=60)  # Use new blue background
@@ -1641,13 +1649,13 @@ import json
 #drive.file uploading files 
 SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.file"]
 auth_window = None  
-SYNC_META_PATH = r"C:\Notes\.syncmeta.json"
-LOCAL_FOLDER_PATH = r"C:\Notes"
+SYNC_META_PATH = folder_path / ".syncmeta.json"
+LOCAL_FOLDER_PATH = folder_path
 service = None
 
 def authenticate():
     creds = None
-    token_path = get_token_path() 
+    token_path = get_token_path()
 
     if os.path.exists(token_path):
         creds = Credentials.from_authorized_user_file(token_path, SCOPES)
@@ -1656,9 +1664,8 @@ def authenticate():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-            CREDENTIALS_PATH = os.path.join(BASE_DIR, "credentials.json")
-            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
+            cred_path = get_cred_path()
+            flow = InstalledAppFlow.from_client_secrets_file(cred_path, SCOPES)
             creds = flow.run_local_server(port=0)
         with open(token_path, "w") as token:
             token.write(creds.to_json())
@@ -1789,9 +1796,14 @@ def sync_now_to_drive():
         drive_file_map = {f["name"]: f for f in drive_files}
 
         for root_dir, dirs, files in os.walk(folder_path):
-            if root_dir != folder_path:
+            # Only allow 'Notes' subfolder
+            rel_path = os.path.relpath(root_dir, folder_path)
+            
+            if rel_path != '.' and not rel_path.startswith("Notes"):
                 print(f"⏭️ Skipped folder: {root_dir}")
+                dirs[:] = []  # Don't recurse further into this subfolder
                 continue
+
 
             for filename in files:
                 if filename == ".syncmeta.json":
@@ -1960,8 +1972,6 @@ def main_api():
     button_frame.pack(pady=10)
 
 
-
-    folder_path = r"C:\Notes"
 
     def show_files():
         try:
