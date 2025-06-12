@@ -150,6 +150,7 @@ def timer():
             remaining_time[0] = timeleft
         else:
             ntimer_label.config(text="DONE!", fg="green")
+            timer_done()
 
             if os.path.exists(sound_path.get()):
                 try:
@@ -186,6 +187,10 @@ def timer():
         ntimer.destroy()
         resume_btn.config(state="disabled")
         pause_btn.config(state="normal")
+
+    def timer_done():
+        pause_btn.config(state="disabled")
+        resume_btn.config(state="disabled")
 
     pause_btn = tk.Button(ntimer, text="⏸ Pause", command=pause)
     pause_btn.pack(side=tk.LEFT)
