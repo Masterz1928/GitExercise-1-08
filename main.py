@@ -22,17 +22,43 @@ import threading
 from dateutil import parser
 import pygame
 from plyer import notification
-import time 
+import time
+import sys
+
+
+def on_exit():
+    root.destroy()
+    sys.exit()  # Ensure the Python process ends
+
 
 pygame.mixer.init()
 
-folder_path = r"C:\Notes"
+global folder_path
+folder_name = "Notes"
+folder_path = Path.home() / folder_name
 
 try:
     os.makedirs(folder_path, exist_ok=True)
     print(f"Folder '{folder_path}' created successfully!")
 except Exception as e:
     print(f"An error occurred: {e}")
+
+def get_token_path():
+    if getattr(sys, 'frozen', False):
+        base_path = os.path.dirname(sys.executable)  # if running as .exe
+    else:
+        base_path = os.path.dirname(__file__)        # if running as .py
+
+    return os.path.join(base_path, 'token.json')
+
+def get_cred_path():
+    if getattr(sys, 'frozen', False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(__file__)
+    return os.path.join(base_path, "credentials.json")
+
+
 
 def run_notepad(file_content=""):
     global Text_Box
@@ -59,10 +85,6 @@ def run_notepad(file_content=""):
     #Set another global variable for saving the file and switching modes
     Current_File_Mode = "Markdown"
 
-    # Set Folder for Notes Location
-    global folder_path
-    folder_path = "C:/Notes"
-
     #Creating Functions Here
     # Creating New File 
     def New_File():
@@ -79,10 +101,24 @@ def run_notepad(file_content=""):
     # Creating a opening function
     def Opening():
         #Clearing text box
-        global Current_File_Mode
+        global Current_File_Mode, text_file
         Text_Box.delete("1.0", tk.END)
         #Grab The file name
-        text_file = filedialog.askopenfilename(initialdir="C:/Notes", title="Open a File", filetypes=(("Text Files", "*.txt"),("HTML Files", "*.html"),("Markdown Files", "*.md"),("All Files", "*.*")))
+
+        if not text_file:
+            text_file = filedialog.askopenfilename(
+                initialdir=str(folder_path),
+                title="Open a File",
+                filetypes=(
+                    ("Text Files", "*.txt"),
+                    ("HTML Files", "*.html"),
+                    ("Markdown Files", "*.md"),
+                    ("All Files", "*.*")
+                )
+            )
+            if not text_file:
+                return  # User cancelled, stop here
+        
         Window_title = text_file
         #Check if there is a file name and if yes, make it global
         if text_file:
@@ -91,20 +127,23 @@ def run_notepad(file_content=""):
             File_extension  =  os.path.splitext(text_file)[1].lower()
             if File_extension == ".md":
                 Current_File_Mode = "Markdown"
+                print("markdown")
                 change_to_markdown()
             elif File_extension in [".html", ".htm"]:
                 Current_File_Mode = "HTML"
+                print("html")
                 change_to_html()
             elif File_extension == ".txt":
-                Current_File_Mode = "text"
+                Current_File_Mode = "Text"
+                print("txt")
                 change_to_text()
             else:
                 # Default to text if unknown type
-                Current_File_Mode = "Markdown"
+                print("This is changing it to MD is seems ")
+                change_to_markdown()
         #Updating Status bar 
         name = text_file
         Status_bar.config(text=f"{name}    ")
-        name = name.replace("C:/Users/", "") #Removing the C:/ Prefix
         NotepadWindow.title(f"{Window_title} - Note Editor")
 
         # Load File Content
@@ -114,6 +153,7 @@ def run_notepad(file_content=""):
         Text_Box.insert(tk.END, File_Content)
         #Then, Close the open file
         text_file.close()
+
         
     # Creating a function to save a file as (in a .txt format) 
     def Saving_File_As():
@@ -130,14 +170,13 @@ def run_notepad(file_content=""):
             file_extention ="*.md"
             filetypestosave = [("Markdown Files", "*.md"), ("All Files", "*.*")]
             
-        text_file = filedialog.asksaveasfilename(defaultextension=file_extention, initialdir="C:/Notes", title="Save File As", filetypes=filetypestosave)
+        text_file = filedialog.asksaveasfilename(defaultextension=file_extention, initialdir=str(folder_path), title="Save File As", filetypes=filetypestosave)
         if text_file:
             open_status_name = text_file
             #Update the status bar
             name = text_file
             Status_bar.config(text=f"Saved: {name}    ")
-            name = name.replace("C:/Users/", "") #Removing the C:/ Prefix
-            NotepadWindow.title(f"{name} - Note Editor")       
+      
 
             # Save the file 
             text_file = open(text_file, "w")
@@ -187,48 +226,44 @@ def run_notepad(file_content=""):
         except tk.TclError:
             pass
 
-    def update_button_based_on_mode():
-        if Current_File_Mode == "Text":
-            bold_btn.config(state=tk.DISABLED)
-            italic_btn.config(state=tk.DISABLED)
-            underline_btn.config(state=tk.DISABLED)
-            font_size_menu.config(state=tk.DISABLED)
-            
-        if Current_File_Mode == "HTML":
-            bold_btn.config(state=tk.DISABLED)
-            italic_btn.config(state=tk.DISABLED)
-            underline_btn.config(state=tk.DISABLED)
-            font_size_menu.config(state=tk.DISABLED)
-            
-        if Current_File_Mode == "Markdown":
-            bold_btn.config(state=tk.NORMAL)
-            italic_btn.config(state=tk.NORMAL)
-            underline_btn.config(state=tk.NORMAL)
-            font_size_menu.config(state=tk.NORMAL)
-            
+
     def change_to_html():
         global Current_File_Mode
         Current_File_Mode = "HTML"
+        print("called change to html")
         File_Settings_Menu.entryconfig("Change to Text File", background="white")  # Color for active mode
         File_Settings_Menu.entryconfig("Change to HTML", background="lightblue")  # Reset others
         File_Settings_Menu.entryconfig("Change to Markdown", background="white")
-        update_button_based_on_mode()
+        bold_btn.config(state=tk.DISABLED)
+        italic_btn.config(state=tk.DISABLED)
+        underline_btn.config(state=tk.DISABLED)
+        font_size_menu.config(state=tk.DISABLED)
+        
+        
 
     def change_to_text():
         global Current_File_Mode
         Current_File_Mode = "Text"
+        print("called change to txt")
         File_Settings_Menu.entryconfig("Change to Text File", background="lightblue")  # Color for active mode
         File_Settings_Menu.entryconfig("Change to HTML", background="white")  # Reset others
         File_Settings_Menu.entryconfig("Change to Markdown", background="white")
-        update_button_based_on_mode()
+        bold_btn.config(state=tk.DISABLED)
+        italic_btn.config(state=tk.DISABLED)
+        underline_btn.config(state=tk.DISABLED)
+        font_size_menu.config(state=tk.DISABLED)
 
     def change_to_markdown():
         global Current_File_Mode
         Current_File_Mode = "Markdown"
+        print("called change to md")
         File_Settings_Menu.entryconfig("Change to Text File", background="white")  # Color for active mode
         File_Settings_Menu.entryconfig("Change to HTML", background="white")  # Reset others
         File_Settings_Menu.entryconfig("Change to Markdown", background="lightblue")
-        update_button_based_on_mode()
+        bold_btn.config(state=tk.NORMAL)
+        italic_btn.config(state=tk.NORMAL)
+        underline_btn.config(state=tk.NORMAL)
+        font_size_menu.config(state=tk.NORMAL)
 
     # Creating a function for cut function
     def cut_text(e=None):
@@ -247,7 +282,7 @@ def run_notepad(file_content=""):
 
 
     # Creating a function for copy function
-    def copy_text(e):
+    def copy_text(e=None):
         global selected_text_by_user
         # Check to see if we used keyboard shortcuts
         if e:
@@ -605,18 +640,16 @@ def run_notepad(file_content=""):
     NotepadWindow.bind("<Control-u>", lambda event: insert_markdown("<u></u>"))
     NotepadWindow.bind("<F1>", help_guide)
 
-def open_note_in_notepad(file_path):
-    # Open the notepad window with content from the file
-    try:
-        with open(file_path, "r") as file:
-            file_content = file.read()
-    except Exception as e:
-        print(f"Error opening file: {e}")
-        file_content = f"Error: {e}"
 
-    # Call run_notepad with file content
-    run_notepad(file_content)
-    Text_Box.insert(tk.END, file_content)
+    NotepadWindow.Opening = Opening
+    return NotepadWindow       
+
+
+def open_note_in_notepad(file_path):
+    global open_status_name, FileModeToSet, text_file
+    text_file = file_path
+    notepad_window = run_notepad()  # create window and get instance
+    notepad_window.Opening()  # call inner function via window
 
 # Example button click to open a file
 def open_file_button_clicked():
@@ -626,7 +659,6 @@ def open_file_button_clicked():
         file_path = os.path.join(folder_path, file_name)  # Combine folder and file name to get full path
         file_path = os.path.abspath(file_path)  # Get absolute path to avoid issues
         open_note_in_notepad(file_path)
-
 
 # color settings of the default
 WHITE_BG       = "#fdfcfa"
@@ -645,7 +677,6 @@ FONT_TEXT = ("Segoe UI", 11)
 # all the path and source
 remarks={}
 pinned_files = []
-folder_path = "C:/Notes"
 trash_folder = os.path.join(folder_path, "Trash")
 remark_path=os.path.join(folder_path,"Remark")
 pinned_path=os.path.join(folder_path,"pinned note")
@@ -662,20 +693,22 @@ root.title("MMU Study Buddy")
 root.geometry("900x600")
 root.configure(bg=WHITE_BG)
 root.minsize(700, 500)
+root.protocol("WM_DELETE_WINDOW", on_exit)
 
-def get_icon():
-    # Get current script folder
-    base_dir = Path(__file__).parent.resolve()
-    icon_path = base_dir / "025.png"
 
-    if icon_path.exists():
-        return tk.PhotoImage(file=icon_path)
+def get_icon_path():
+    if getattr(sys, 'frozen', False):
+        # .exe version
+        return os.path.join(sys._MEIPASS, "025.ico")
     else:
-        print("Icon file not found.")
-        return None
-icon = get_icon()
-if icon:
-    root.iconphoto(False, icon)
+        # .py version
+        return os.path.join(os.path.dirname(__file__), "025.ico")
+
+icon_path = get_icon_path()
+if os.path.exists(icon_path):
+    root.iconbitmap(icon_path)  # <-- Use this for .ico files
+else:
+    print("Icon file not found.")
 
 
 top_frame = tk.Frame(root, bg=BLUE_BG, height=60)  # Use new blue background
@@ -973,6 +1006,7 @@ def timer():
             remaining_time[0] = timeleft
         else:
             ntimer_label.config(text="DONE!", fg="green")
+            timer_done()
 
             if os.path.exists(sound_path.get()):
                 try:
@@ -1009,6 +1043,10 @@ def timer():
         ntimer.destroy()
         resume_btn.config(state="disabled")
         pause_btn.config(state="normal")
+
+    def timer_done():
+        pause_btn.config(state="disabled")
+        resume_btn.config(state="disabled")
 
     pause_btn = tk.Button(ntimer, text="⏸ Pause", command=pause)
     pause_btn.pack(side=tk.LEFT)
@@ -1445,7 +1483,7 @@ def export_all_notes_as_zip():
         messagebox.showinfo("Info", "No notes to export.")
         return
 
-    export_folder = "C:/Notes/Exports"
+    export_folder = folder_path/ "Exports"
     os.makedirs(export_folder, exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     zip_path = os.path.join(export_folder, f"exported_notes_{timestamp}.zip")
@@ -1616,25 +1654,27 @@ import json
 #drive.file uploading files 
 SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.file"]
 auth_window = None  
-SYNC_META_PATH = r"C:\Notes\.syncmeta.json"
-LOCAL_FOLDER_PATH = r"C:\Notes"
-
+SYNC_META_PATH = folder_path / ".syncmeta.json"
+LOCAL_FOLDER_PATH = folder_path
+service = None
 
 def authenticate():
     creds = None
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    token_path = get_token_path()
+
+    if os.path.exists(token_path):
+        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-            CREDENTIALS_PATH = os.path.join(BASE_DIR, "credentials.json")
-            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
+            cred_path = get_cred_path()
+            flow = InstalledAppFlow.from_client_secrets_file(cred_path, SCOPES)
             creds = flow.run_local_server(port=0)
-        with open('token.json', 'w') as token:
+        with open(token_path, "w") as token:
             token.write(creds.to_json())
+
 
     return build('drive', 'v3', credentials=creds)
 
@@ -1761,9 +1801,14 @@ def sync_now_to_drive():
         drive_file_map = {f["name"]: f for f in drive_files}
 
         for root_dir, dirs, files in os.walk(folder_path):
-            if root_dir != folder_path:
+            # Only allow 'Notes' subfolder
+            rel_path = os.path.relpath(root_dir, folder_path)
+            
+            if rel_path != '.' and not rel_path.startswith("Notes"):
                 print(f"⏭️ Skipped folder: {root_dir}")
+                dirs[:] = []  # Don't recurse further into this subfolder
                 continue
+
 
             for filename in files:
                 if filename == ".syncmeta.json":
@@ -1826,7 +1871,6 @@ def sync_now_to_drive():
                 result = sync_download_files(service, drive_file["id"], local_file_path)
                 updated_meta[filename] = result
 
-        print("Updated meta content before saving:", updated_meta)
         save_sync_meta(updated_meta)
 
         print("✅ 2-Way Sync complete!")
@@ -1836,37 +1880,83 @@ def sync_now_to_drive():
         print("❌ Sync failed:", e)
         return True  # Fail safe: exit loop on error
 
-def sync_till_up_to_date():
-    print("I am till all file is up to date")
-    while True:
-        SyncStatus = sync_now_to_drive()
-        if SyncStatus:
-            break
+def threading_sync_till_up_to_date():
+    def sync_till_up_to_date():
+        print("I am till all file is up to date")
+        while True:
+            SyncStatus = sync_now_to_drive()
+            if SyncStatus:
+                break
+        print("✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅")
+        messagebox.showinfo("Sync Completed", "All Files Have Been Synced")
+    threading.Thread(target=sync_till_up_to_date, daemon=True).start()
     
-    print("✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅")
-    messagebox.showinfo("Sync Completed", "All Files Have Been Synced")
 
 
 ######
 
+
+
+
+import tkinter as tk
+from tkinter import ttk, messagebox
+import threading
+import os
+import webbrowser
+
+# --- Sync logic (outside main_api) ---
+
+
+SYNC_OPTIONS = {
+    "Every 10 min": 600,
+    "Every 30 min": 1800,
+    "Every 1 hour": 3600
+}
+
+sync_interval_var = tk.StringVar(value="Every 10 min")
+auto_sync_enabled_var = tk.BooleanVar(value=True)
 auto_sync_enabled = True
 auto_sync_timer = None
 
-def main_api():
-    sync_interval_var = tk.StringVar(value="5 min")
-    auto_sync_enabled_var = tk.BooleanVar(value=True)
+def start_auto_sync(interval_label):
+    global auto_sync_timer, auto_sync_enabled
 
-    def show_files():
-        global service
-        folder_path = r"C:\Notes"
-        try:
-            files = os.listdir(folder_path)
-            files = [file for file in files if os.path.isfile(os.path.join(folder_path, file))]
-            file_listbox.delete(0, tk.END)
-            for file in files:
-                file_listbox.insert(tk.END, file)
-        except FileNotFoundError:
-            print("The folder path doesn't exist.")
+    interval_seconds = SYNC_OPTIONS.get(interval_label, 0)
+    if interval_seconds == 0 or not auto_sync_enabled:
+        print("⛔ Auto-sync is OFF.")
+        return
+
+    print(f"⏳ Scheduled next auto-sync in {interval_seconds} seconds...")
+    auto_sync_timer = threading.Timer(interval_seconds, run_auto_sync, args=(interval_label,))
+    auto_sync_timer.start()
+
+def run_auto_sync(interval_label):
+    global auto_sync_enabled
+
+    if not auto_sync_enabled:
+        print("⛔ Auto-sync stopped; won't continue syncing.")
+        return
+
+    try:
+        print("🔄 Auto-Sync triggered...")
+        threading_sync_till_up_to_date()
+    finally:
+        if auto_sync_enabled:
+            start_auto_sync(interval_label)
+
+
+def stop_auto_sync():
+    global auto_sync_timer
+    if auto_sync_timer:
+        auto_sync_timer.cancel()
+        auto_sync_timer = None
+    print("⏸️ Auto-Sync Paused")
+
+# --- UI function ---
+
+def main_api():
+    authenticate()
+    global auto_sync_enabled
 
     drive_window = tk.Toplevel()
     drive_window.title("Drive Panel")
@@ -1886,36 +1976,76 @@ def main_api():
     button_frame = tk.Frame(drive_window)
     button_frame.pack(pady=10)
 
+
+
+    def show_files():
+        try:
+            files = os.listdir(folder_path)
+            files = [file for file in files if os.path.isfile(os.path.join(folder_path, file))]
+            file_listbox.delete(0, tk.END)
+            for file in files:
+                file_listbox.insert(tk.END, file)
+        except FileNotFoundError:
+            print("The folder path doesn't exist.")
+
     # Buttons
-    SyncNow = tk.Button(button_frame, text="⬇️ Sync Now", command=sync_till_up_to_date, font=("Arial", 10),
-            bg="#e0e0e0",    # light gray background
-            fg="#000000",    # black text
-            relief="raised",
-            bd=2,
-            width=20,
-            height=2)
+    SyncNow = tk.Button(button_frame, text="⬇️ Sync Now", command=threading_sync_till_up_to_date, font=("Arial", 10),
+                        bg="#e0e0e0", fg="#000000", relief="raised", bd=2, width=20, height=2)
     SyncNow.pack(pady=5)
-    
+
     def open_drive():
         webbrowser.open("https://drive.google.com/drive/my-drive")
 
     ToDrive = tk.Button(button_frame, text="🌐 Go to Drive", command=open_drive, font=("Arial", 10),
-            bg="#e0e0e0",    # light gray background
-            fg="#000000",    # black text
-            relief="raised",
-            bd=2,
-            width=20,
-            height=2)
+                        bg="#e0e0e0", fg="#000000", relief="raised", bd=2, width=20, height=2)
     ToDrive.pack(pady=5)
 
     ReloadFiles = tk.Button(button_frame, text="🔄 Reload", command=show_files, font=("Arial", 10),
-            bg="#e0e0e0",    # light gray background
-            fg="#000000",    # black text
-            relief="raised",
-            bd=2,
-            width=20,
-            height=2)
+                            bg="#e0e0e0", fg="#000000", relief="raised", bd=2, width=20, height=2)
     ReloadFiles.pack(pady=5)
+
+    # Interval dropdown
+    SyncTiming = ttk.OptionMenu(button_frame, sync_interval_var, sync_interval_var.get(), *SYNC_OPTIONS.keys())
+    SyncTiming.pack(pady=5)
+
+
+    def toggle_auto_sync():
+        global sync_interval_var
+        global auto_sync_enabled
+
+        auto_sync_enabled = auto_sync_enabled_var.get()
+        if auto_sync_enabled:
+            SyncTiming.config(state="normal")
+            start_auto_sync(sync_interval_var.get())
+            print("▶️ Auto-Sync Enabled")
+        else:
+            SyncTiming.config(state="disabled")
+            stop_auto_sync()
+
+    SyncAuto = tk.Checkbutton(button_frame, text="Auto-Sync", variable=auto_sync_enabled_var, command=toggle_auto_sync)
+    SyncAuto.pack(pady=5)
+
+    def logout():
+        global service
+        print("Logging out...")
+        service = None
+        token_path = get_token_path()  # <-- Use your helper function here
+        if os.path.exists(token_path):
+            try:
+                os.remove(token_path)
+                print("✅ token.json deleted successfully")
+            except Exception as e:
+                print(f"❌ Failed to delete token.json: {e}")
+        else:
+            print("⚠️ token.json not found, already deleted?")
+
+        messagebox.showinfo("Logged Out", "You have been logged out successfully.")
+        drive_window.destroy()
+        
+
+    LogOut = tk.Button(button_frame, text="🚪 Log Out", command=logout, font=("Arial", 10),
+                        bg="#e0e0e0", fg="#000000", relief="raised", bd=2, width=20, height=2)
+    LogOut.pack(pady=5)
 
     # Footer
     tk.Label(
@@ -1926,99 +2056,16 @@ def main_api():
         fg="#555555"
     ).pack(pady=(15, 10))
 
-
-
-    SYNC_OPTIONS = {
-    "Every 10 min": 600,
-    "Every 30 min": 1800,
-    "Every 1 hour": 3600
-    }
-
-    sync_interval_var = tk.StringVar(value="Every 10 min")  # Default
-
-    # Interval dropdown
-    SyncTiming = ttk.OptionMenu(button_frame, sync_interval_var, sync_interval_var.get(), *SYNC_OPTIONS.keys())
-    SyncTiming.pack()
-
-
-
-    def start_auto_sync():
-        global auto_sync_timer
-
-        interval_label = sync_interval_var.get()
-        interval_seconds = SYNC_OPTIONS.get(interval_label, 0)
-
-        if interval_seconds == 0:
-            print("⛔ Auto-sync is OFF.")
-            return
-
-        if auto_sync_enabled:
-            print(f"⏳ Scheduled next auto-sync in {interval_seconds} seconds...")
-            auto_sync_timer = threading.Timer(interval_seconds, run_auto_sync)
-            auto_sync_timer.start()
-
-
-    def run_auto_sync():
-        try:
-            print("🔄 Auto-Sync triggered...")
-            sync_till_up_to_date() 
-        finally:
-            start_auto_sync()
-
-
-    from tkinter import BooleanVar, Checkbutton
-
-    auto_sync_enabled_var = BooleanVar(value=True)
-
-    def toggle_auto_sync():
-        global auto_sync_enabled, auto_sync_timer
-        auto_sync_enabled = auto_sync_enabled_var.get()
-        if auto_sync_enabled:
-            SyncTiming.config(state="normal")
-            start_auto_sync()
-            print("▶️ Auto-Sync Enabled")
-        else:
-            SyncTiming.config(state="disabled")  # Disable dropdown            
-            if auto_sync_timer:
-                auto_sync_timer.cancel()
-            print("⏸️ Auto-Sync Paused")
-
-    # Enable/disable checkbox
-    SyncAuto = tk.Checkbutton(button_frame, text="Auto-Sync", variable=auto_sync_enabled_var, command=toggle_auto_sync)
-    SyncAuto.pack()
-
-
-
-    def logout():
-        global service
-        print("Logging out...")
-        service = None
-        if os.path.exists("token.json"):
-            os.remove("token.json")
-        messagebox.showinfo("Logged Out", "You have been logged out successfully.")
-
-    def on_closing():
-        if messagebox.askyesno("Sign Out", "Are you sure you want to sign out?"):
-            logout()
-            LogOut.config(state="disabled")
-            messagebox.showinfo("Goodbye", "You have been signed out. You will need to sign in again next time.")
-            drive_window.destroy()
-        else:
-            drive_window.destroy()
-            main_api()
-
-
-        LogOut = ttk.Button(button_frame, text="🚪 Log Out", command=on_closing, font=("Arial", 10),
-            bg="#e0e0e0",    # light gray background
-            fg="#000000",    # black text
-            relief="raised",
-            bd=2,
-            width=20,
-            height=2)
-        LogOut.pack(pady=5)
-
-
     show_files()
+
+    # Initialize auto sync state
+
+token_path = get_token_path()
+auto_sync_enabled = auto_sync_enabled_var.get()
+if auto_sync_enabled and os.path.exists(token_path):
+    start_auto_sync(sync_interval_var.get())
+else: 
+    messagebox.showinfo("Sign In for Auto-Sync", "Sign in to enable your auto sync function")
 
 def threaded_authenticate(callback):
     global auth_window 
