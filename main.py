@@ -733,16 +733,14 @@ logo_label.pack(side='left', padx=20, pady=10)
 
 #notebook tab style
 style = ttk.Style()
-style.configure('TNotebook', background=WHITE_BG, borderwidth=0)
+style.configure('TNotebook', background=WHITE_BG, borderwidth=0)#tnotebook is the style name of container
 style.configure('TNotebook.Tab',
                 background=BLUE_ACCENT,
                 foreground=TEXT_COLOR,
                 padding=[20, 10],
                 font=("Segoe UI", 10, "bold"),
-                borderwidth=0)
-style.map("TNotebook.Tab",
-          background=[("selected", BLUE_SELECTED)],
-          expand=[("selected", [1, 1, 1, 0])])
+                borderwidth=0)#tnotebook.tab is each individual tab in the tab bar in the notebook.
+style.map("TNotebook.Tab",expand=[("selected", [1, 1, 1, 0])])# use pixel to make it larger
 
 #notebook area
 notebook_frame = tk.Frame(root, bg=WHITE_BG)
@@ -764,7 +762,7 @@ home_title = tk.Label(home,
 home_title.pack(pady=20)
 
 def check_reminders_on_startup():
-    now = datetime.now()
+    now = datetime.now()#get the time
     due_reminders = []
 
     for date_str, remark in remarks.items():
@@ -774,7 +772,7 @@ def check_reminders_on_startup():
             print(f"Invalid date format: {date_str}")
             continue
         
-        if now <= reminder_time :
+        if now <= reminder_time :# show the remark of future date
             due_reminders.append(f"{date_str} → {remark}")
 
     if due_reminders:
@@ -827,8 +825,8 @@ def get_pinned_notes_from_txt():
         return []
 
 def populate_pinned_preview(parent_frame):
-    for widget in parent_frame.winfo_children():
-        widget.destroy()
+    for widget in parent_frame.winfo_children():#get information feature in parent frame
+        widget.destroy()#prevent duplicate frame
 
     tk.Label(parent_frame, text="📌 Pinned Notes", font=("Arial", 12, "bold")).pack(anchor="w", padx=10, pady=(5, 0))
 
@@ -855,13 +853,13 @@ def create_feature_card(parent, icon, title, desc, tab_index):
     card = tk.Frame(parent, bg=BLUE_ACCENT, bd=1, relief="flat", highlightthickness=2,
                     highlightbackground=BLUE_SELECTED)
     card.bind("<Button-1>", lambda e: notebook.select(tab_index))
-
+    #different color when cursor in or out the card
     def on_enter(e): card.config(bg=BLUE_SELECTED)
     def on_leave(e): card.config(bg=BLUE_ACCENT)
 
     card.bind("<Enter>", on_enter)
     card.bind("<Leave>", on_leave)
-
+    # design for the card
     icon_label = tk.Label(card, text=icon, font=("Segoe UI Emoji", 30), bg=BLUE_ACCENT)
     icon_label.pack(pady=(10, 0))
 
@@ -1393,7 +1391,7 @@ def temp_message(message, color="green"):
 load_txt()
 
 # all note function
-def update_file_list():
+def update_file_list():#This ensures the UI reflects the current state of files in the folder.
     file_listbox.delete(0, tk.END)
     files = [f for f in os.listdir(folder_path) if f.endswith((".txt", ".md", ".html"))]
     for file in files:
@@ -1435,7 +1433,7 @@ def perform_advanced_search():
     
     # Search in file names and contents
     for file_name in os.listdir(folder_path):
-        if file_name.endswith(".txt"):
+        if file_name.endswith((".txt", ".md", ".html")):
             file_path = os.path.join(folder_path, file_name)
 
             name_match = query in file_name.lower()
@@ -1463,21 +1461,7 @@ def perform_advanced_search():
     else:
         messagebox.showinfo("Search", "No matches found.")
 
-def export_all_notes():
-    export_path = "all_notes_export.txt"
-    with open(export_path, "w", encoding="utf-8") as export_file:
-        files = [f for f in os.listdir(folder_path) if f.endswith((".txt",".html",".md"))]
-        if not files:
-            messagebox.showinfo("Info", "No notes to export.")
-            return
 
-        for file in files:
-            file_path = os.path.join(folder_path, file)
-            export_file.write(f"\n--- {file} ---\n")
-            with open(file_path, "r", encoding="utf-8") as f:
-                export_file.write(f.read() + "\n")
-
-    messagebox.showinfo("Success", f"All notes exported to '{export_path}' successfully.")
 
 def export_notes_with_format():
     # Ask user to choose format
@@ -1516,7 +1500,7 @@ def show_listbox_menu(event):
         listbox_menu.grab_release()#prevent the menu freeze the app until you click
 
 def pin_selected_note():
-    selected = file_listbox.curselection()
+    selected = file_listbox.curselection()#Returns a tuple containing the line numbers of the selected element or elements
     if selected:
         file_name = file_listbox.get(selected)
         if file_name not in pinned_files:
@@ -1531,7 +1515,7 @@ def pin_selected_note():
             messagebox.showinfo("Info", "This note is already pinned.")
 
 
-
+# same with the pin note just change the append to remove
 def unpin_selected_note():
     selected = file_listbox.curselection()
     if selected:
@@ -1545,7 +1529,7 @@ def unpin_selected_note():
                     if tree.item(item, "values")[0] == file_name:
                         tree.delete(item)
                         break
-                save_pinned_notes()  # ✅ Save the updated list
+                save_pinned_notes()  # Save the updated list
                 populate_pinned_preview(pinned_preview_frame)
                 messagebox.showinfo("Info", f"Unpinned '{file_name}' successfully!")
         else:
@@ -1572,7 +1556,7 @@ def unpin_from_tree():
             if file_name in pinned_files:
                 pinned_files.remove(file_name)
             tree.delete(selected[0])
-            save_pinned_notes()  # ✅ Save the updated list
+            save_pinned_notes()  #  Save the updated list
             populate_pinned_preview(pinned_preview_frame)
             messagebox.showinfo("Info", f"Unpinned '{file_name}' successfully!")
     else:
@@ -2176,52 +2160,74 @@ remark_text = tk.Text(calendar_tab, width=50, height=6, font=("Arial", 12))
 remark_text.pack(pady=10)
 
 # Theme function
-def choose_calendar_color():
-    color = colorchooser.askcolor(title="Choose Calendar Color")[1]
-    if color:
-        cal.config(
-            background=color,
-            headersbackground=color,
-            disabledbackground=color,
-            normalbackground=color,
-            weekendbackground=color,
-            selectbackground=color,
-            selectforeground="white",
-        )
+def save_color(theme_data):
+    try:
+        with open("cld_color.txt","w")as f:
+            for key, value in theme_data.items():
+                f.write(f"{key}={value}\n")
+    except FileNotFoundError:
+        None
+
+def load_color():
+    theme_data={}
+    try:
+        with open("cld_color.txt","r") as f:
+            for line in f:
+                if "=" in line:
+                    key,value=line.strip().split("=",1)
+                    theme_data[key]= value
+    except FileNotFoundError:
+        return None
+    return theme_data
 
 def apply_theme(choice):
     if choice == "Custom":
-        choose_calendar_color()
-    elif choice == "Pink":
-        cal.config(
-            background="#FFE4E1",
-            headersbackground="#FFB6C1",
-            disabledbackground="#FFE4E1",
-            normalbackground="#FFE4E1",
-            weekendbackground="#FFD1DC",
-            selectbackground="#FF69B4",
-            selectforeground="white",
-        )
-    elif choice == "Blue":
-        cal.config(
-            background="#E0FFFF",
-            headersbackground="#87CEFA",
-            disabledbackground="#E0FFFF",
-            normalbackground="#E0FFFF",
-            weekendbackground="#ADD8E6",
-            selectbackground="#00BFFF",
-            selectforeground="white",
-        )
-    elif choice == "Purple":
-        cal.config(
-            background="#E6E6FA",
-            headersbackground="#D8BFD8",
-            disabledbackground="#E6E6FA",
-            normalbackground="#E6E6FA",
-            weekendbackground="#D8BFD8",
-            selectbackground="#9370DB",
-            selectforeground="white",
-        )
+        color = colorchooser.askcolor(title="Choose Calendar Color")[1]
+        if color:
+            theme_data = {
+                "background": color,
+                "headersbackground": color,
+                "disabledbackground": color,
+                "normalbackground": color,
+                "weekendbackground": color,
+                "selectbackground": color,
+                "selectforeground": "white"
+            }
+            cal.config(**theme_data)#it represent all things in the theme data
+            save_color(theme_data)
+    else:
+        if choice == "Pink":
+            theme_data = {
+                "background": "#FFE4E1",
+                "headersbackground": "#FFB6C1",
+                "disabledbackground": "#FFE4E1",
+                "normalbackground": "#FFE4E1",
+                "weekendbackground": "#FFD1DC",
+                "selectbackground": "#FF69B4",
+                "selectforeground": "white"
+            }
+        elif choice == "Blue":
+            theme_data = {
+                "background": "#E0FFFF",
+                "headersbackground": "#87CEFA",
+                "disabledbackground": "#E0FFFF",
+                "normalbackground": "#E0FFFF",
+                "weekendbackground": "#ADD8E6",
+                "selectbackground": "#00BFFF",
+                "selectforeground": "white"
+            }
+        elif choice == "Purple":
+            theme_data = {
+                "background": "#E6E6FA",
+                "headersbackground": "#D8BFD8",
+                "disabledbackground": "#E6E6FA",
+                "normalbackground": "#E6E6FA",
+                "weekendbackground": "#D8BFD8",
+                "selectbackground": "#9370DB",
+                "selectforeground": "white"
+            }
+        cal.config(**theme_data)
+        save_color(theme_data)
 
 # Save/load remarks
 def highlight_remark_dates():
@@ -2239,7 +2245,7 @@ def highlight_remark_dates():
         if tag:
             try:
                 # Convert date string to datetime.date object
-                date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+                date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
                 # Add a calendar event with the tag (color)
                 cal.calevent_create(date_obj, remark, tag)
             except Exception as e:
@@ -2273,7 +2279,7 @@ def save_remark_for_date():
         messagebox.showwarning("Empty", "Please enter a remark.")
         return
 
-    def open_importance_popup():
+    def open_importance_popup():# the importance of the remark for user
         popup = tk.Toplevel()
         popup.title("Select Importance")
         popup.geometry("250x200")
@@ -2370,6 +2376,9 @@ card2.grid(row=0, column=1, padx=15, pady=15)
 card3.grid(row=0, column=2, padx=15, pady=15)
 card4.grid(row=0, column=3, padx=15, pady=15)
 
+theme_data = load_color()
+if theme_data:
+    cal.config(**theme_data)
 populate_pinned_preview(pinned_preview_frame)
 
 update_file_list()
