@@ -1643,7 +1643,7 @@ import webbrowser
 import json
 
 # Defines permission 
-# metadata - view file names adn metadata 
+# metadata - view file names and metadata 
 #drive.file uploading files 
 SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.file"]
 auth_window = None  
@@ -1654,16 +1654,19 @@ service = None
 def authenticate():
     creds = None
     token_path = get_token_path()
-
+    #If the file token.json already exists, then the user has logged in before.
     if os.path.exists(token_path):
+        #Load the saved credentials from token.json.
         creds = Credentials.from_authorized_user_file(token_path, SCOPES)
 
     if not creds or not creds.valid:
+        #if no cred or invalid  
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
             cred_path = get_cred_path()
             flow = InstalledAppFlow.from_client_secrets_file(cred_path, SCOPES)
+            # launches website to login 
             creds = flow.run_local_server(port=0)
         with open(token_path, "w") as token:
             token.write(creds.to_json())
@@ -1675,29 +1678,41 @@ def get_or_create_main_folder(service):
     global folder
     folder_name = "MMU Study Buddy Files"
     query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+    # search for the "MMU Study Buddy Files"
     results = service.files().list(q=query, fields="files(id, name)").execute()
+    #get matching files 
     items = results.get('files', [])
+    #  If a matching folder was found, return ID for the first folder in the list 
     if items:
         return items[0]['id']
+    #If no folder was found, we prepare the metadata to create a new one with the same name and folder type.
     file_metadata = {
         'name': folder_name,
         'mimeType': 'application/vnd.google-apps.folder'
     }
     folder = service.files().create(body=file_metadata, fields='id').execute()
+    # get ID for new folder 
     return folder['id']
 
 ##############
 
 def sync_upload_file(service, file_path, folder_id, existing_drive_id=None):
+    #🔹 This gets just the file name (no folder path) from the file_path.
+    # E.g., if file_path = "C:/Notes/mydoc.txt", then file_name = "mydoc.txt"
     file_name = os.path.basename(file_path)
+    #prepares the metadata that tells Drive 
+    # "name" – What to call the file in Drive.
+    # "parents" – Which Drive folder it belongs in (by ID).
     file_metadata = {"name": file_name, "parents": [folder_id]}
+    #This prepares the file data for upload
     media = MediaFileUpload(file_path, resumable=True)
-
+    # If the file already exists on Drive We use .update() to replace its contents.
     if existing_drive_id:
         uploaded_file = service.files().update(
             fileId=existing_drive_id,
             media_body=media
         ).execute()
+    # If the file doesn't exist yet in Drive We use .create() to upload a brand-new file.
     else:
         uploaded_file = service.files().create(
             body=file_metadata,
@@ -1705,7 +1720,8 @@ def sync_upload_file(service, file_path, folder_id, existing_drive_id=None):
             fields="id, modifiedTime"
         ).execute()
 
-    # 🔁 Make sure to fetch the updated modifiedTime
+    # Make sure to fetch the updated modifiedTime
+    # Whether it was created or updated, we now ask Drive again to give us the most accurate, current modified time, just in case.
     updated_file = service.files().get(fileId=uploaded_file["id"], fields="id, modifiedTime").execute()
 
     return {
@@ -1718,17 +1734,30 @@ def sync_upload_file(service, file_path, folder_id, existing_drive_id=None):
 
 def sync_download_files(service, file_id, local_file_path):
     try:
+        #prepares a request to download the file's content (media) using the file's ID.
         request = service.files().get_media(fileId=file_id)
+        #make sure that the folder for the file exists locally. if exist then exist_ok = True to prevent error
         os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
+        #Opens the file in write-binary mode (wb) to save the incoming file content.
         with open(local_file_path, 'wb') as f:
+            #Google Drive chunked file downloader
             downloader = MediaIoBaseDownload(f, request)
             done = False
+             #Keeps downloading in chunks until it's fully done cuz the API downloads chunk by chunk 
             while not done:
                 status, done = downloader.next_chunk()
+            #After downloading, this fetches the file's modifiedTime from Drive (for sync timestamp)
             drive_file = service.files().get(fileId=file_id, fields='modifiedTime').execute()
+        # get modified time from metadata 
+        # This is a string timestamp like "2024-05-23T16:04:00.000Z" (UTC format)
         drive_mod_time_str = drive_file['modifiedTime']
+        # Converts the string timestamp into a Python datetime object
         drive_mod_time = parser.parse(drive_mod_time_str)
+        #Converts the datetime into a UNIX timestamp (a float number like 1717248896.789
+        # the OS uses this format for modified times 
         mod_timestamp = drive_mod_time.timestamp()
+        #sets the local file’s "last modified" and "last accessed" time to match Drive
+        #
         os.utime(local_file_path, (mod_timestamp, mod_timestamp))
         return {
             "drive_id": file_id,
@@ -1740,85 +1769,116 @@ def sync_download_files(service, file_id, local_file_path):
 
 
 def list_drive_files(service, folder_id):
+    #Find all files that are in this folder (the folder ID we provided), and are not in the trash
     query = f"'{folder_id}' in parents and trashed = false"
+    #only want to get back the id, name, and modifiedTime of each file
     fields = "files(id, name, modifiedTime)"
+    #call api and fetches results
     results = service.files().list(q=query, fields=fields).execute()
     return results.get('files', [])
 
 # ---------- Sync meta (local cache) ----------
 
 def load_sync_meta():
+    #Checks if the .syncmeta.json file exists in the folder
     if os.path.exists(SYNC_META_PATH):
         try:
             with open(SYNC_META_PATH, "r", encoding="utf-8") as f:
+                #he whole file as a string and strips out extra newlines/spaces from both ends
                 content = f.read().strip()
+                #If the file is empty (no content at all), return an empty dictionary – meaning: "no sync data yet"
                 if not content:
                     return {}
+                #Converts the JSON string into a Python dictionary.
                 return json.loads(content)
+        #If something is wrong with the JSON format (like it's corrupted), this catches the error
         except json.JSONDecodeError:
             print("⚠️ Warning: .syncmeta.json is corrupted or invalid. Resetting.")
             return {}
+    #If the .syncmeta.json file doesn’t exist at all, just return an empty dictionary
     return {}
 
 def save_sync_meta(meta):
     print(f"Saving sync meta to: {SYNC_META_PATH}")
     try:
+        #Open .syncmeta.json for writing ("w" mode), creating or overwriting the file
         with open(SYNC_META_PATH, "w", encoding="utf-8") as f:
             json.dump(meta, f, indent=4)
         print("Updated into json")
+    # print msg if got any issue 
     except Exception as e:
         print("Failed to save sync meta:", e)
 
 def get_local_modified_time(filepath):
+    #Returns the last modified time of the file, as a timestamp
+    #Converts that raw timestamp into a readable datetime object (e.g., 2025-06-12 12:45:00+00:00)
+    ##tz=timezone.utc makes sure it's in UTC time
     return datetime.fromtimestamp(os.path.getmtime(filepath), tz=timezone.utc)
 
 
 def timestamps_close(t1, t2, tolerance_seconds=2):
+    #(t1 - t2) gives you a timedelta object
+    # then convert to seconds and abs to make sure its positive 
     delta = abs((t1 - t2).total_seconds())
+    #If the time difference is less than or equal to 2 seconds, return True
     return delta <= tolerance_seconds
 
 # ---------- Main sync function ----------
  
 def sync_now_to_drive():
     sync_meta = load_sync_meta()
+    #A new dictionary to hold the updated sync state after this sync run
     updated_meta = {}
     all_synced = True  # Assume everything is synced unless proven otherwise
 
     try:
         print("🔄 2-Way Sync started...")
+        # Get the folder path to work with
         folder_path = LOCAL_FOLDER_PATH
+        # call the authenticate() 
         service = authenticate()
+        # Get the folder path to work with
         drive_folder_id = get_or_create_main_folder(service)
-
+        #List all files in the Drive folder
         drive_files = list_drive_files(service, drive_folder_id)
+        #Create a map (dict) of filename
+        # call the func, gets mkes it into  dict foormat storing all the info tht will be used, modified time, id, and name 
         drive_file_map = {f["name"]: f for f in drive_files}
-
+        #go through your local folder (like Notes/) 
         for root_dir, dirs, files in os.walk(folder_path):
-            # Only allow 'Notes' subfolder
+            # Only allow 'Notes' subfolder and prevents os.walk from descending deeper into skipped folders
             rel_path = os.path.relpath(root_dir, folder_path)
-            
+            # if rel_path is not current directory and doesnt start with notes 
             if rel_path != '.' and not rel_path.startswith("Notes"):
                 print(f"⏭️ Skipped folder: {root_dir}")
+                # Dont go any further in 
+                # to clears the current folder’s subdirectories.
                 dirs[:] = []  # Don't recurse further into this subfolder
                 continue
 
-
             for filename in files:
+                #Skip syncing the .syncmeta.json file itself
                 if filename == ".syncmeta.json":
                     continue
-
+                #Get local path and last modified time and check if the file exists on Drive
+                #creates the full path to a file on your local computer
                 local_path = os.path.join(folder_path, filename)
+                # gets the last modified time of the local file
                 local_time = get_local_modified_time(local_path)
+                #checks if this file also exists on Google Drive 
                 drive_file = drive_file_map.get(filename)
                 
+                #Retrieve the previously stored sync times
                 prev_entry = sync_meta.get(filename, {})
                 prev_local_time = parser.parse(prev_entry.get("local_modified")) if prev_entry.get("local_modified") else None
                 prev_drive_time = parser.parse(prev_entry.get("drive_modified")) if prev_entry.get("drive_modified") else None
 
+                # Case 1 File exists both locally and on Drive
                 if drive_file:
+                    #get its ID and last modified time
                     drive_id = drive_file["id"]
                     drive_time = parser.parse(drive_file["modifiedTime"])
-
+                    # if Local is newer → Upload and more than the 2 tolerance seconds 
                     if local_time > drive_time and not timestamps_close(local_time, drive_time):
                         print(f"🔼 Local newer → Uploading {filename}")
                         all_synced = False
@@ -1828,7 +1888,8 @@ def sync_now_to_drive():
                             "drive_modified": uploaded["drive_modified"],
                             "drive_id": uploaded["drive_id"]
                         }
-
+                    
+                    # if Drive is newer → Download
                     elif drive_time > local_time and not timestamps_close(drive_time, local_time):
                         print(f"🔽 Drive newer → Downloading {filename}")
                         all_synced = False
@@ -1836,6 +1897,7 @@ def sync_now_to_drive():
                         updated_meta[filename] = result
 
                     else:
+                        #we still update the metadata so it accurately reflects the file’s current state (in case .syncmeta.json was outdated before)
                         print(f"✅ Up-to-date: {filename}")
                         # Leave `all_synced` unchanged here to avoid false positive
                         updated_meta[filename] = {
@@ -1843,8 +1905,9 @@ def sync_now_to_drive():
                             "drive_modified": drive_time.isoformat(),
                             "drive_id": drive_id
                         }
-
+                # Case 2: File only exists locally
                 else:
+                    #If Drive doesn't have this file, we upload it from local
                     print(f"🔼 Only on PC → Uploading {filename}")
                     all_synced = False
                     uploaded = sync_upload_file(service, local_path, drive_folder_id)
@@ -1855,6 +1918,7 @@ def sync_now_to_drive():
                     }
 
         # Handle files only on Drive
+        #If a file exists in Drive but not locally → download it
         for drive_file in drive_files:
             filename = drive_file["name"]
             local_file_path = os.path.join(folder_path, filename)
@@ -1864,15 +1928,19 @@ def sync_now_to_drive():
                 result = sync_download_files(service, drive_file["id"], local_file_path)
                 updated_meta[filename] = result
 
+        #Write the latest state into .syncmeta.json for future syncs
         save_sync_meta(updated_meta)
 
+        #If no changes were made, return True. Otherwise, False
         print("✅ 2-Way Sync complete!")
         return all_synced
-
+    #If anything crashes, print msg 
     except Exception as e:
         print("❌ Sync failed:", e)
         return True  # Fail safe: exit loop on error
 
+#Loops in background until all files are 100% synced
+# Uses a thread to avoid freezing your UI and show pop out 
 def threading_sync_till_up_to_date():
     def sync_till_up_to_date():
         print("I am till all file is up to date")
@@ -1883,13 +1951,7 @@ def threading_sync_till_up_to_date():
         print("✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅")
         messagebox.showinfo("Sync Completed", "All Files Have Been Synced")
     threading.Thread(target=sync_till_up_to_date, daemon=True).start()
-    
-
-
 ######
-
-
-
 
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -1899,40 +1961,49 @@ import webbrowser
 
 # --- Sync logic (outside main_api) ---
 
-
+# the sync options 
 SYNC_OPTIONS = {
     "Every 10 min": 600,
     "Every 30 min": 1800,
     "Every 1 hour": 3600
 }
 
+#Holds the currently selected auto-sync interval option
 sync_interval_var = tk.StringVar(value="Every 10 min")
+#This BooleanVar holds the current on/off switch for auto-sync (UI Checkbox)
 auto_sync_enabled_var = tk.BooleanVar(value=True)
 auto_sync_enabled = True
 auto_sync_timer = None
 
 def start_auto_sync(interval_label):
     global auto_sync_timer, auto_sync_enabled
-
+    # converting the human-readable label ("Every 10 min", etc.) into actual seconds using the SYNC_OPTIONS dictionary
+    #If the label isn’t found, you default to 0
     interval_seconds = SYNC_OPTIONS.get(interval_label, 0)
+    #If the interval isn’t valid OR auto-sync is currently disabled, cancel starting the timer
     if interval_seconds == 0 or not auto_sync_enabled:
         print("⛔ Auto-sync is OFF.")
         return
 
     print(f"⏳ Scheduled next auto-sync in {interval_seconds} seconds...")
+    # create a Timer thread that waits interval_seconds then calls run_auto_sync(interval_label)
     auto_sync_timer = threading.Timer(interval_seconds, run_auto_sync, args=(interval_label,))
+    # Starts the countdown
     auto_sync_timer.start()
 
+#triggered after the timer delay to perform the actual sync 
 def run_auto_sync(interval_label):
     global auto_sync_enabled
 
+#check to cancel any further syncing if the user disables it 
     if not auto_sync_enabled:
         print("⛔ Auto-sync stopped; won't continue syncing.")
         return
-
+# start the sync 
     try:
         print("🔄 Auto-Sync triggered...")
         threading_sync_till_up_to_date()
+    #reschedules the next auto-sync only if auto-sync is still enabled.
     finally:
         if auto_sync_enabled:
             start_auto_sync(interval_label)
@@ -1940,8 +2011,11 @@ def run_auto_sync(interval_label):
 
 def stop_auto_sync():
     global auto_sync_timer
+    #Checks if a timer is currently running
     if auto_sync_timer:
+        #cancels the countdown.
         auto_sync_timer.cancel()
+        #Clears the timer object completely (no active auto-sync timer exists)
         auto_sync_timer = None
     print("⏸️ Auto-Sync Paused")
 
@@ -1973,11 +2047,17 @@ def main_api():
 
     def show_files():
         try:
+            #get all entries in the given folder_path 
             files = os.listdir(folder_path)
+            #os.path.join(folder_path, file) to get the full path
+            # os.path.isfile(...) to ensure it’s a file and not a folder
             files = [file for file in files if os.path.isfile(os.path.join(folder_path, file))]
+            #Clears any existing entries (prevent duplicate on refresh)
             file_listbox.delete(0, tk.END)
+            #Loops through the filtered list of files and adds each one to the listbox 
             for file in files:
                 file_listbox.insert(tk.END, file)
+        # if no folder, print msg 
         except FileNotFoundError:
             print("The folder path doesn't exist.")
 
@@ -1987,6 +2067,7 @@ def main_api():
     SyncNow.pack(pady=5)
 
     def open_drive():
+        # module to open the default web browser and load the Google Drive "My Drive" page
         webbrowser.open("https://drive.google.com/drive/my-drive")
 
     ToDrive = tk.Button(button_frame, text="🌐 Go to Drive", command=open_drive, font=("Arial", 10),
@@ -2001,16 +2082,20 @@ def main_api():
     SyncTiming = ttk.OptionMenu(button_frame, sync_interval_var, sync_interval_var.get(), *SYNC_OPTIONS.keys())
     SyncTiming.pack(pady=5)
 
-
+    #when the user checks or unchecks an "Auto Sync" checkbox
     def toggle_auto_sync():
         global sync_interval_var
         global auto_sync_enabled
-
+        #updates the value of auto_sync_enabled based on the checkbox's state
         auto_sync_enabled = auto_sync_enabled_var.get()
+        #if checked 
         if auto_sync_enabled:
+            #dropdown normal 
             SyncTiming.config(state="normal")
+            #Starts the auto-sync timer
             start_auto_sync(sync_interval_var.get())
             print("▶️ Auto-Sync Enabled")
+        #if unchecked 
         else:
             SyncTiming.config(state="disabled")
             stop_auto_sync()
@@ -2021,14 +2106,19 @@ def main_api():
     def logout():
         global service
         print("Logging out...")
+        # ends the session by resetting the Drive API service object to None
         service = None
-        token_path = get_token_path()  # <-- Use your helper function here
+        token_path = get_token_path()  
+        #Checks if that token file actually exists
         if os.path.exists(token_path):
             try:
+                # then we remove it  
                 os.remove(token_path)
                 print("✅ token.json deleted successfully")
+            # if cant delete, print msg 
             except Exception as e:
                 print(f"❌ Failed to delete token.json: {e}")
+        # if cannot find the file 
         else:
             print("⚠️ token.json not found, already deleted?")
 
@@ -2051,31 +2141,41 @@ def main_api():
 
     show_files()
 
-    # Initialize auto sync state
-
+#gets the path to the token.json
 token_path = get_token_path()
+#check the checkbox to see if the user wants auto-sync turned on
 auto_sync_enabled = auto_sync_enabled_var.get()
+
+# The user wants auto-sync on.
+# and The user is signed in (i.e. token file exists).
+
 if auto_sync_enabled and os.path.exists(token_path):
+    #Starts the auto-sync process using the interval selected 
     start_auto_sync(sync_interval_var.get())
+#prompt the user to sign in tto use auto sync 
 else: 
     messagebox.showinfo("Sign In for Auto-Sync", "Sign in to enable your auto sync function")
 
+#authenticate the user in the background.
 def threaded_authenticate(callback):
     global auth_window 
-
+    # function that runs in a background thread
     def worker():
         global service
         try:
             service = authenticate()
             root.after(0, lambda: finish_auth(callback))  # callback on main thread
+        ## if something wrong print msg 
         except Exception as e:
             print("Authentication failed:", e)
+            #makes sure this runs on the main thread since UI on main thread 
             root.after(0, lambda: messagebox.showerror("Error", "Authentication failed. Please try again."))
 
-
+    # Launches the worker() function in a daemon thread, so it runs in the background and exits when the app closes.
     threading.Thread(target=worker, daemon=True).start()
 
 def finish_auth(callback):
+    #Closes the login window (if it exists)
     global auth_window
     if auth_window is not None:
         auth_window.destroy()
