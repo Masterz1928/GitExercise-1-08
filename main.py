@@ -83,6 +83,7 @@ def run_notepad(file_content=""):
     selected_text_by_user = False
 
     #Set another global variable for saving the file and switching modes
+    global Current_File_Mode
     Current_File_Mode = "Markdown"
 
     #Creating Functions Here
