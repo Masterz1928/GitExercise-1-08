@@ -157,7 +157,7 @@ def run_notepad(file_content=""):
         
     # Creating a function to save a file as (in a .txt format) 
     def Saving_File_As():
-        global open_status_name 
+        global open_status_name, Current_File_Mode
         if Current_File_Mode == "Text":
             file_extention ="*.txt"
             filetypestosave = [("Text Files", "*.txt"), ("All Files", "*.*")]
@@ -186,7 +186,7 @@ def run_notepad(file_content=""):
 
     # Creating a function to save file (to update the contents of the file tbh)
     def Saving_File():
-        global open_status_name
+        global open_status_name, Current_File_Mode
         if open_status_name:
             # Save the file 
             text_file = open(open_status_name, "w")
