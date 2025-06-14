@@ -465,7 +465,14 @@ def run_notepad(file_content=""):
 
 
     def update_preview(event=None):
+        global Current_File_Mode
         markdown_text = Text_Box.get("1.0", tk.END)
+
+        if Current_File_Mode == "Text":
+            print(f"[DEBUG] File Mode = {Current_File_Mode}")
+            escaped_text = markdown_text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            html_preview.set_html(f"<pre style='font-family: monospace; white-space: pre-wrap'>{escaped_text}</pre>")
+            return
 
         lines = markdown_text.splitlines()
         safe_lines = []
@@ -542,6 +549,8 @@ def run_notepad(file_content=""):
         elif Current_File_Mode == "HTML":
             # For HTML mode, we don't convert, just send raw HTML to the preview widget
             html_preview.set_html(markdown_text)  # Directly display HTML content in preview
+
+
 
 
     # Bind the function to key release in the Text_Box
@@ -632,7 +641,7 @@ def run_notepad(file_content=""):
 
 
     # Adding in basic Binding
-    NotepadWindow.bind("<Control-Key-x>", selected_text_by_user)
+    NotepadWindow.bind("<Control-Key-x>", cut_text)
     NotepadWindow.bind("<Control-Key-c>", copy_text)
     NotepadWindow.bind("<Control-Key-v>", paste_text)
     NotepadWindow.bind("<Control-b>", lambda event: insert_markdown("**"))
