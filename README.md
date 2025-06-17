@@ -1,1 +1,1 @@
-Link to app's release: https://github.com/Masterz1928/Mini_IT_Project-1-08/releases/tag/v1.0.4
+Link to app's release: https://github.com/Masterz1928/Mini_IT_Project-1-08/releases/tag/v1.0.5
