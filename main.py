@@ -83,6 +83,7 @@ def run_notepad(file_content=""):
     selected_text_by_user = False
 
     #Set another global variable for saving the file and switching modes
+    global Current_File_Mode
     Current_File_Mode = "Markdown"
 
     #Creating Functions Here
@@ -147,7 +148,45 @@ def run_notepad(file_content=""):
         NotepadWindow.title(f"{Window_title} - Note Editor")
 
         # Load File Content
-        text_file = open(text_file, "r")
+        text_file = open(text_file, "r", encoding="utf-8")
+        File_Content = text_file.read()
+        #Add it into the text box
+        Text_Box.insert(tk.END, File_Content)
+        #Then, Close the open file
+        text_file.close()
+
+    def Opening_from_notepad():
+        #Clearing text box
+        global Current_File_Mode
+        Text_Box.delete("1.0", tk.END)
+        #Grab The file name
+        text_file = filedialog.askopenfilename(initialdir=str(folder_path), title="Open a File", filetypes=(("Text Files", "*.txt"),("HTML Files", "*.html"),("Markdown Files", "*.md"),("All Files", "*.*")))
+        Window_title = text_file
+        #Check if there is a file name and if yes, make it global
+        if text_file:
+            global open_status_name 
+            open_status_name = text_file
+            File_extension  =  os.path.splitext(text_file)[1].lower()
+            if File_extension == ".md":
+                Current_File_Mode = "Markdown"
+                change_to_markdown()
+            elif File_extension in [".html", ".htm"]:
+                Current_File_Mode = "HTML"
+                change_to_html()
+            elif File_extension == ".txt":
+                Current_File_Mode = "text"
+                change_to_text()
+            else:
+                # Default to text if unknown type
+                Current_File_Mode = "Markdown"
+        #Updating Status bar 
+        name = text_file
+        Status_bar.config(text=f"{name}    ")
+        name = name.replace("C:/Users/", "") #Removing the C:/ Prefix
+        NotepadWindow.title(f"{Window_title} - Note Editor")
+
+        # Load File Content
+        text_file = open(text_file, "r", encoding="utf-8")
         File_Content = text_file.read()
         #Add it into the text box
         Text_Box.insert(tk.END, File_Content)
@@ -179,7 +218,7 @@ def run_notepad(file_content=""):
       
 
             # Save the file 
-            text_file = open(text_file, "w")
+            text_file = open(text_file, "w", encoding="utf-8")
             text_file.write(Text_Box.get(1.0, tk.END))
             #close the file 
             text_file.close()
@@ -189,7 +228,7 @@ def run_notepad(file_content=""):
         global open_status_name, Current_File_Mode
         if open_status_name:
             # Save the file 
-            text_file = open(open_status_name, "w")
+            text_file = open(open_status_name, "w", encoding="utf-8")
             text_file.write(Text_Box.get(1.0, tk.END))
             #close the file 
             text_file.close()
@@ -268,44 +307,53 @@ def run_notepad(file_content=""):
     # Creating a function for cut function
     def cut_text(e=None):
         global selected_text_by_user
-        if e:
-            selected_text_by_user = NotepadWindow.clipboard_get()
-        else:
-            if Text_Box.selection_get():
-                # put into a variable
-                selected_text_by_user = Text_Box.selection_get()
-                # Delete the selected text
-                Text_Box.delete("sel.first" ,"sel.last")
-                #Clear clipboard, then put new infomation
-                NotepadWindow.clipboard_clear()
-                NotepadWindow.clipboard_append(selected_text_by_user)
+        try:
+            if e:
+                selected_text_by_user = NotepadWindow.clipboard_get()
+            else:
+                if Text_Box.selection_get():
+                    # put into a variable
+                    selected_text_by_user = Text_Box.selection_get()
+                    # Delete the selected text
+                    Text_Box.delete("sel.first" ,"sel.last")
+                    #Clear clipboard, then put new infomation
+                    NotepadWindow.clipboard_clear()
+                    NotepadWindow.clipboard_append(selected_text_by_user)
+        except tk.TclError:
+            pass
 
 
     # Creating a function for copy function
     def copy_text(e=None):
-        global selected_text_by_user
-        # Check to see if we used keyboard shortcuts
-        if e:
-            selected_text_by_user = NotepadWindow.clipboard_get()
+        try:
+            global selected_text_by_user
+            # Check to see if we used keyboard shortcuts
+            if e:
+                selected_text_by_user = NotepadWindow.clipboard_get()
 
-        if Text_Box.selection_get():
-            selected_text_by_user = Text_Box.selection_get()
-            #Clear clipboard, then put new infomation
-            NotepadWindow.clipboard_clear()
-            NotepadWindow.clipboard_append(selected_text_by_user)
+            if Text_Box.selection_get():
+                selected_text_by_user = Text_Box.selection_get()
+                #Clear clipboard, then put new infomation
+                NotepadWindow.clipboard_clear()
+                NotepadWindow.clipboard_append(selected_text_by_user)
+        except tk.TclError:
+            pass
 
 
     # Creating a function for paste function
     def paste_text(e=None):
-        global selected_text_by_user
+        try:
+            global selected_text_by_user
 
-        #check to see if there are any keybaord shortcut
-        if e:
-            selected_text_by_user = NotepadWindow.clipboard_get()
-        else:
-            if selected_text_by_user:
-                Position = Text_Box.index(tk.INSERT)
-                Text_Box.insert(Position, selected_text_by_user) 
+            #check to see if there are any keybaord shortcut
+            if e:
+                selected_text_by_user = NotepadWindow.clipboard_get()
+            else:
+                if selected_text_by_user:
+                    Position = Text_Box.index(tk.INSERT)
+                    Text_Box.insert(Position, selected_text_by_user)
+        except tk.TclError:
+            pass
 
 
     def count_words():
@@ -329,7 +377,7 @@ def run_notepad(file_content=""):
     def help_guide(event=None):
         help_win = tk.Toplevel()  # create a Toplevel window
         help_win.title("Notepad Help")
-        help_win.geometry("400x300")
+        help_win.geometry("500x300")
 
         # Custom style for active tab
         style = ttk.Style(help_win)
@@ -380,7 +428,6 @@ def run_notepad(file_content=""):
         Tab3Text = tk.Label(tab3, text=(
             "• Preview updates automatically on after typing.\n"
             "• Supports Markdown and HTML preview.\n"
-            "• Some advanced tags may not render fully."
         ), justify="left", padx=10, pady=10)
         
         # Set the font size
@@ -474,6 +521,7 @@ def run_notepad(file_content=""):
             html_preview.set_html(f"<pre style='font-family: monospace; white-space: pre-wrap'>{escaped_text}</pre>")
             return
 
+        # Clean malformed <tag style=...> lines without closing tags
         lines = markdown_text.splitlines()
         safe_lines = []
         skipping = False
@@ -482,73 +530,60 @@ def run_notepad(file_content=""):
             if re.search(r'<\w+\s+style=.*?>', line) and not re.search(r'</\w+>', line):
                 skipping = True
                 continue
-
             if skipping:
                 if re.search(r'</\w+>', line):
                     skipping = False
                 continue
-
             safe_lines.append(line)
 
         filtered_text = "\n".join(safe_lines)
 
-        if Current_File_Mode == "Markdown":
-            try:
-                #to convert markdown into html for display
-                html_content = markdown.markdown(filtered_text, extensions=["nl2br"]) #New line to break
-                # General knowledge - Parse - analyzes and interprets strings of data, breaking them down into meaningful parts according to a specific set of rules or grammar
-                # We use soup to to inspect the HTML, not to drink 
-                soup = BeautifulSoup(html_content, "html.parser")
-                # Make a list of the halal styles that we aallow the program to use  
-                # Adding in an if statement that filters out tags depending on the program's mode  
-                if Current_File_Mode == "Markdown":
-                    ALLOWED_STYLES = ["font-size", "color"]
-                elif Current_File_Mode == "html":
-                    ALLOWED_STYLES = ["font-size", "color", "background", "border", "margin", "padding"]
-                else:
-                    ALLOWED_STYLES = []  # for pure text, no styles at all
-                    for tag in soup.find_all(True):
-                        tag.unwrap() # Removes tags, keep content
-                #Find all the tags in the program 
-                for tag in soup.find_all(True):
-                    # check if style attribute is present 
-                    if "style" in tag.attrs:
-                        # split the string into individual parts
-                        # example
-                        #tag[style] does --> "font-size:12px; color:red; background:black;"
-                        # the split thing does --> ["font-size:12px", "color:red", "background:black"]
-                        styles = tag["style"].split(";")
-                        clean_styles = []
-                        # now we loop in the styles we have gotten 
-                        for s in styles:
-                            # remove whitespaces 
-                            s = s.strip()
-                            #Check is the sstyle is halal or haram 
-                            for allowed in ALLOWED_STYLES:
-                                # if halal ?
-                                if s.startswith(allowed):
-                                    # we keep it 
-                                    clean_styles.append(s)
-                        # if there any suitable tags remaining, then we rebuild it together with the ";"
-                        if clean_styles:
-                            tag["style"] = "; ".join(clean_styles)
-                        #Otherwise remove it completely 
-                        else:
-                            del tag["style"]
-                        
-                # Convert Soup to String
-                final_html = str(soup)
-                #update the html Preview 
-                html_preview.set_html(final_html)
-        
-            #Catch any errors then print it out 
-            except Exception as e:
-                print(f"Error generating HTML preview: {e}")
+        try:
+            if Current_File_Mode == "Markdown":
+                # Convert Markdown to HTML
+                html_content = markdown.markdown(filtered_text, extensions=["nl2br"])
+            elif Current_File_Mode == "HTML":
+                # HTML is raw input
+                html_content = filtered_text
+            else:
+                html_content = ""
 
-        
-        elif Current_File_Mode == "HTML":
-            # For HTML mode, we don't convert, just send raw HTML to the preview widget
-            html_preview.set_html(markdown_text)  # Directly display HTML content in preview
+            # Parse the HTML with BeautifulSoup
+            soup = BeautifulSoup(html_content, "html.parser")
+
+            # Set allowed styles by mode
+            if Current_File_Mode == "Markdown":
+                ALLOWED_STYLES = ["font-size", "color"]
+            elif Current_File_Mode == "HTML":
+                ALLOWED_STYLES = ["font-size", "color"]
+            else:
+                ALLOWED_STYLES = []
+                # In plain text mode, unwrap all HTML tags (if somehow passed in)
+                for tag in soup.find_all(True):
+                    tag.unwrap()
+
+            # Filter style attributes
+            for tag in soup.find_all(True):
+                if "style" in tag.attrs:
+                    styles = tag["style"].split(";")
+                    clean_styles = []
+                    for s in styles:
+                        s = s.strip()
+                        for allowed in ALLOWED_STYLES:
+                            if s.startswith(allowed):
+                                clean_styles.append(s)
+                    if clean_styles:
+                        tag["style"] = "; ".join(clean_styles)
+                    else:
+                        del tag["style"]
+
+            # Render cleaned HTML
+            final_html = str(soup)
+            html_preview.set_html(final_html)
+
+        except Exception as e:
+            print(f"Error generating HTML preview: {e}")
+
 
 
 
@@ -611,7 +646,7 @@ def run_notepad(file_content=""):
     file_menu = tk.Menu(TopMenuBar, tearoff=False)
     TopMenuBar.add_cascade(label="File", menu=file_menu)
     file_menu.add_command(label="New", command=New_File)
-    file_menu.add_command(label="Open", command=Opening)
+    file_menu.add_command(label="Open", command=Opening_from_notepad)
     file_menu.add_command(label="Save", command=Saving_File)
     file_menu.add_command(label="Save as", command=Saving_File_As)
 
@@ -703,22 +738,6 @@ root.geometry("900x600")
 root.configure(bg=WHITE_BG)
 root.minsize(700, 500)
 root.protocol("WM_DELETE_WINDOW", on_exit)
-
-
-def get_icon_path():
-    if getattr(sys, 'frozen', False):
-        # .exe version
-        return os.path.join(sys._MEIPASS, "025.ico")
-    else:
-        # .py version
-        return os.path.join(os.path.dirname(__file__), "025.ico")
-
-icon_path = get_icon_path()
-if os.path.exists(icon_path):
-    root.iconbitmap(icon_path)  # <-- Use this for .ico files
-else:
-    print("Icon file not found.")
-
 
 top_frame = tk.Frame(root, bg=BLUE_BG, height=60)  # Use new blue background
 top_frame.pack(fill='x')
@@ -1393,14 +1412,14 @@ load_txt()
 # all note function
 def update_file_list():#This ensures the UI reflects the current state of files in the folder.
     file_listbox.delete(0, tk.END)
-    files = [f for f in os.listdir(folder_path) if f.endswith((".txt", ".md", ".html"))]
+    files = [f for f in os.listdir(folder_path) if f.endswith((".txt", ".md", ".html", ".json"))]
     for file in files:
         file_listbox.insert(tk.END, file)
 
 def search_notes():
     search_term = search_entry.get().lower().strip()
     file_listbox.delete(0, tk.END)
-    files = [f for f in os.listdir(folder_path) if f.endswith((".txt", ".md", ".html"))]
+    files = [f for f in os.listdir(folder_path) if f.endswith((".txt", ".md", ".html", ".json"))]
 
     shown_files = set()  # To prevent duplicates
 
@@ -2192,7 +2211,7 @@ search_entry = tk.Entry(notes_tab, font=FONT_TEXT)
 search_entry.place(relx=0.1, rely=0.05, relwidth=0.5)
 search_entry.bind("<Return>", lambda event: perform_advanced_search())
 
-clear_search_button = ttk.Button(notes_tab, text="Clear Search", command=lambda: [search_entry.delete(0, tk.END), update_file_list()])
+clear_search_button = ttk.Button(notes_tab, text="Clear Search/Reload", command=lambda: [search_entry.delete(0, tk.END), update_file_list()])
 clear_search_button.place(relx=0.62, rely=0.05, relwidth=0.15)
 
 btn_trash = ttk.Button(notes_tab, text="Trash Bin", command=lambda: open_trash_bin())
