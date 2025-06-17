@@ -739,22 +739,6 @@ root.configure(bg=WHITE_BG)
 root.minsize(700, 500)
 root.protocol("WM_DELETE_WINDOW", on_exit)
 
-
-def get_icon_path():
-    if getattr(sys, 'frozen', False):
-        # .exe version
-        return os.path.join(sys._MEIPASS, "025.ico")
-    else:
-        # .py version
-        return os.path.join(os.path.dirname(__file__), "025.ico")
-
-icon_path = get_icon_path()
-if os.path.exists(icon_path):
-    root.iconbitmap(icon_path)  # <-- Use this for .ico files
-else:
-    print("Icon file not found.")
-
-
 top_frame = tk.Frame(root, bg=BLUE_BG, height=60)  # Use new blue background
 top_frame.pack(fill='x')
 
